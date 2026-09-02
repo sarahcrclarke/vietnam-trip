@@ -1,5 +1,5 @@
 import ActivityCard from "./ActivityCard";
-import { DragHandleIcon, CalendarIcon, CloseIcon } from "./icons";
+import { DragHandleIcon, CalendarIcon, CloseIcon, CameraIcon } from "./icons";
 import { formatDMY } from "@/lib/date";
 
 export default function StopPanel({ day, index, currency }) {
@@ -14,7 +14,7 @@ export default function StopPanel({ day, index, currency }) {
         </div>
       </div>
 
-      <div className="mb-12 flex-1 border border-ink/30 bg-parchment">
+      <div className="flex-1 border border-ink/30 bg-parchment">
         <div className="flex items-center justify-between border-b border-ink/30 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-ink/60 sm:px-6 sm:text-xs">
           <span className="flex items-center gap-2">
             <DragHandleIcon />
@@ -26,11 +26,17 @@ export default function StopPanel({ day, index, currency }) {
           </span>
         </div>
 
-        <img
-          src={day.photo}
-          alt={day.loc}
-          className="h-56 w-full object-cover sm:h-72"
-        />
+        {day.photo ? (
+          <img
+            src={day.photo}
+            alt={day.loc}
+            className="h-56 w-full object-cover sm:h-72"
+          />
+        ) : (
+          <div className="flex h-56 w-full items-center justify-center bg-ink/5 text-ink/30 sm:h-72">
+            <CameraIcon />
+          </div>
+        )}
 
         <div className="flex flex-wrap items-start justify-between gap-3 px-4 pt-5 sm:px-6">
           <h2 className="font-display text-3xl font-bold text-forest sm:text-4xl">
@@ -42,9 +48,11 @@ export default function StopPanel({ day, index, currency }) {
           </div>
         </div>
 
-        <p className="px-4 pb-5 pt-3 text-sm leading-relaxed text-ink/80 sm:px-6 sm:text-base">
-          {day.desc}
-        </p>
+        {day.desc && (
+          <p className="px-4 pb-5 pt-3 text-sm leading-relaxed text-ink/80 sm:px-6 sm:text-base">
+            {day.desc}
+          </p>
+        )}
 
         <div className="mx-4 border-t border-dashed border-ink/40 sm:mx-6" />
 
@@ -58,24 +66,28 @@ export default function StopPanel({ day, index, currency }) {
           </span>
         </div>
 
-        <div className="flex items-center gap-2 border-t border-ink/30 px-4 pb-4 pt-6 sm:px-6">
-          <span className="text-rust" aria-hidden>
-            ☆
-          </span>
-          <h3 className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-forest sm:text-sm">
-            Things to do in {day.loc}
-          </h3>
-        </div>
+        {day.activities.length > 0 && (
+          <>
+            <div className="flex items-center gap-2 border-t border-ink/30 px-4 pb-4 pt-6 sm:px-6">
+              <span className="text-rust" aria-hidden>
+                ☆
+              </span>
+              <h3 className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-forest sm:text-sm">
+                Things to do in {day.loc}
+              </h3>
+            </div>
 
-        <div className="grid grid-cols-2 gap-x-3 gap-y-5 px-4 pb-6 sm:grid-cols-4 sm:px-6 sm:pb-8">
-          {day.activities.map((activity) => (
-            <ActivityCard
-              key={activity.id}
-              activity={activity}
-              currency={currency}
-            />
-          ))}
-        </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-5 px-4 pb-6 sm:grid-cols-4 sm:px-6 sm:pb-8">
+              {day.activities.map((activity) => (
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  currency={currency}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
