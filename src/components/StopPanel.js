@@ -1,4 +1,4 @@
-import ActivityCard from "./ActivityCard";
+import ActivityGrid from "./ActivityGrid";
 import { DragHandleIcon, CalendarIcon, CloseIcon, CameraIcon } from "./icons";
 import { formatDMY } from "@/lib/date";
 
@@ -66,28 +66,20 @@ export default function StopPanel({ day, index, currency }) {
           </span>
         </div>
 
-        {day.activities.length > 0 && (
-          <>
-            <div className="flex items-center gap-2 border-t border-ink/30 px-4 pb-4 pt-6 sm:px-6">
-              <span className="text-rust" aria-hidden>
-                ☆
-              </span>
-              <h3 className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-forest sm:text-sm">
-                Things to do in {day.loc}
-              </h3>
-            </div>
+        <div className="flex items-center gap-2 border-t border-ink/30 px-4 pb-4 pt-6 sm:px-6">
+          <span className="text-rust" aria-hidden>
+            ☆
+          </span>
+          <h3 className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-forest sm:text-sm">
+            Things to do in {day.loc}
+          </h3>
+        </div>
 
-            <div className="grid grid-cols-2 gap-x-3 gap-y-5 px-4 pb-6 sm:grid-cols-4 sm:px-6 sm:pb-8">
-              {day.activities.map((activity) => (
-                <ActivityCard
-                  key={activity.id}
-                  activity={activity}
-                  currency={currency}
-                />
-              ))}
-            </div>
-          </>
-        )}
+        <ActivityGrid
+          activities={day.activities}
+          currency={currency}
+          loc={day.loc}
+        />
       </div>
     </div>
   );
