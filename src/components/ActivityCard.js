@@ -1,13 +1,5 @@
 import { CameraIcon, CloseIcon } from "./icons";
-
-const VOTER_LABELS = { Sarah: "SCC", Dom: "DC", Steph: "SR" };
-const VOTE_ORDER = ["Sarah", "Dom", "Steph"];
-
-function voteStyle(value) {
-  if (value === true) return "border-forest/70 bg-sage text-forest";
-  if (value === false) return "border-rust/60 text-rust/80";
-  return "border-ink/40 text-ink/60";
-}
+import ActivityVotes from "./ActivityVotes";
 
 export default function ActivityCard({ activity, currency }) {
   const { name, link, cost, image, votes } = activity;
@@ -46,18 +38,7 @@ export default function ActivityCard({ activity, currency }) {
         </span>
       </p>
 
-      <div className="mt-1.5 flex gap-1.5">
-        {VOTE_ORDER.map((voter) => (
-          <span
-            key={voter}
-            className={`rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium ${voteStyle(
-              votes[voter]
-            )}`}
-          >
-            {VOTER_LABELS[voter]}
-          </span>
-        ))}
-      </div>
+      <ActivityVotes votes={votes} />
     </div>
   );
 }
