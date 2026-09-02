@@ -1,5 +1,6 @@
 import { CameraIcon, CloseIcon } from "./icons";
 import ActivityVotes from "./ActivityVotes";
+import ActivityFields from "./ActivityFields";
 
 export default function ActivityCard({ activity, currency }) {
   const { name, link, cost, image, votes } = activity;
@@ -28,15 +29,7 @@ export default function ActivityCard({ activity, currency }) {
 
       <p className="mt-1.5 truncate text-sm font-semibold text-ink">{name}</p>
 
-      <p className="mt-0.5 truncate border-b border-dashed border-ink/35 pb-0.5 font-mono text-[11px] text-ink/45">
-        {link || "Link (optional)"}
-      </p>
-
-      <p className="mt-0.5 border-b border-dashed border-ink/35 pb-0.5 font-mono text-[11px]">
-        <span className={cost ? "font-semibold text-rust" : "text-ink/45"}>
-          {cost ? `${currency}${cost}` : `${currency} cost`}
-        </span>
-      </p>
+      <ActivityFields link={link} cost={cost} currency={currency} />
 
       <ActivityVotes votes={votes} />
     </div>
