@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import { formatDMY } from "@/lib/date";
 import TravellerAvatars from "./TravellerAvatars";
+import MobileNav from "./MobileNav";
+import { MenuIcon } from "./icons";
 
 // Displayed trip title — the JSON keeps its original "Việt Nam", but the
 // approved heading text is "Vietnam"; the source file is never edited.
@@ -20,36 +25,61 @@ export default function TripHeader({
   travellers,
   onTravellersChange,
 }) {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const travellerCount = travellers.filter((t) => t.included).length;
 
   return (
     <header className="border-b border-border">
       {/* Top navigation bar */}
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-4 sm:px-6">
-        <div className="flex items-center gap-8">
-          <span className="font-display text-sm font-bold tracking-wide text-forest">
-            VIỆT NAM
-          </span>
-          <div className="flex gap-6">
-            <button className="font-sans text-sm text-forest transition-opacity hover:opacity-70">
-              ITINERARY
-            </button>
-            <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
-              MAP
-            </button>
-            <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
-              VOTES
-            </button>
-            <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
-              PHOTOS
-            </button>
-            <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
-              INFO
-            </button>
-          </div>
+      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:gap-6 sm:px-6">
+        {/* Wordmark — VIETNAM on all sizes */}
+        <span className="font-display text-sm font-bold tracking-wide text-forest flex-none">
+          VIETNAM
+        </span>
+
+        {/* Desktop navigation (hidden on mobile) */}
+        <div className="hidden md:flex gap-6 flex-1">
+          <button className="font-sans text-sm text-forest transition-opacity hover:opacity-70">
+            ITINERARY
+          </button>
+          <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
+            MAP
+          </button>
+          <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
+            VOTES
+          </button>
+          <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
+            PHOTOS
+          </button>
+          <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
+            INFO
+          </button>
         </div>
-        <TravellerAvatars travellers={travellers} onChange={onTravellersChange} />
+
+        {/* Right controls: traveller avatars and mobile hamburger */}
+        <div className="flex items-center gap-3 sm:gap-4 flex-none">
+          {/* Traveller avatars (responsive via TravellerAvatars) */}
+          <TravellerAvatars
+            travellers={travellers}
+            onChange={onTravellersChange}
+            compact={true}
+          />
+
+          {/* Mobile hamburger menu (hidden on md and up) */}
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Open menu"
+            aria-expanded={mobileNavOpen}
+            className="md:hidden text-stone/50 transition-colors hover:text-forest"
+          >
+            <MenuIcon className="h-5 w-5" />
+          </button>
+        </div>
       </nav>
+
+      {/* Mobile navigation panel */}
+      <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
       {/* Header content */}
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 text-center">

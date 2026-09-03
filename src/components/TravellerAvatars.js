@@ -33,7 +33,7 @@ function Pill({ active, onClick, children }) {
 // live in TripPlanner (shared trip-level state); this component only reads
 // and edits that list via props, so voting/transport-assignment features can
 // read the same source later. Client-side only — no persistence.
-export default function TravellerAvatars({ travellers, onChange }) {
+export default function TravellerAvatars({ travellers, onChange, compact = false }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const seq = useRef(0);
@@ -62,6 +62,14 @@ export default function TravellerAvatars({ travellers, onChange }) {
     onChange((prev) => [...prev, { id, initials: "", name: "", voter: false, included: true }]);
   };
 
+  // On mobile (compact mode): show only 2 avatars + overflow indicator
+  // On desktop: show up to 4 avatars + overflow indicator
+  const compactVisible = compact ? included.slice(0, 2) : visible;
+  const compactOverflow = compact ? included.length - 2 : overflow;
+  const avatarSize = compact ? "h-5 w-5 text-[9px]" : "h-7 w-7 text-xs";
+  const avatarBorder = compact ? "border" : "border-2";
+  const avatarSpacing = compact ? "-space-x-1.5" : "-space-x-2";
+
   return (
     <div className="relative" ref={rootRef}>
       <button
@@ -69,25 +77,25 @@ export default function TravellerAvatars({ travellers, onChange }) {
         onClick={() => setOpen((v) => !v)}
         aria-label="Manage travellers"
         aria-expanded={open}
-        className="flex items-center -space-x-2"
+        className={`flex items-center ${avatarSpacing}`}
       >
-        {visible.map((t, i) => (
+        {compactVisible.map((t, i) => (
           <span
             key={t.id}
-            className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-background text-xs font-bold ${AVATAR_STYLES[i % AVATAR_STYLES.length]}`}
+            className={`flex ${avatarSize} items-center justify-center rounded-full ${avatarBorder} border-background font-bold ${AVATAR_STYLES[i % AVATAR_STYLES.length]}`}
           >
             {t.initials || "?"}
           </span>
         ))}
-        {overflow > 0 && (
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-stone/20 text-xs font-bold text-stone">
-            +{overflow}
+        {compactOverflow > 0 && (
+          <span className={`flex ${avatarSize} items-center justify-center rounded-full ${avatarBorder} border-background bg-stone/20 font-bold text-stone`}>
+            +{compactOverflow}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-80 rounded-[6px] border border-border bg-background p-3 text-left shadow-md sm:w-96">
+        <div className="absolute right-0 top-full z-20 mt-2 max-w-[calc(100vw-2rem)] w-80 rounded-[6px] border border-border bg-background p-3 text-left shadow-md sm:w-96">
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-stone/50">
             Travellers
           </p>

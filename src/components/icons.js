@@ -25,6 +25,24 @@ export function CloseIcon({ className = "h-3 w-3" }) {
   );
 }
 
+export function MenuIcon({ className = "h-6 w-6" }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    >
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="4" y1="18" x2="20" y2="18" />
+    </svg>
+  );
+}
+
 export function CameraIcon() {
   return (
     <svg
