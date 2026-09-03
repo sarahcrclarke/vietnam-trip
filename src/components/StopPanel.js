@@ -1,6 +1,11 @@
 import ActivityGrid from "./ActivityGrid";
-import { DragHandleIcon, CalendarIcon, CloseIcon, CameraIcon } from "./icons";
-import { formatDMY } from "@/lib/date";
+import DestinationName from "./DestinationName";
+import DestinationDate from "./DestinationDate";
+import DestinationDescription from "./DestinationDescription";
+import DestinationTag from "./DestinationTag";
+import DestinationCost from "./DestinationCost";
+import DestinationPhoto from "./DestinationPhoto";
+import { DragHandleIcon, CloseIcon } from "./icons";
 
 export default function StopPanel({ day, index, currency }) {
   const number = String(index + 1).padStart(2, "0");
@@ -26,44 +31,20 @@ export default function StopPanel({ day, index, currency }) {
           </span>
         </div>
 
-        {day.photo ? (
-          <img
-            src={day.photo}
-            alt={day.loc}
-            className="h-56 w-full object-cover sm:h-72"
-          />
-        ) : (
-          <div className="flex h-56 w-full items-center justify-center bg-ink/5 text-ink/30 sm:h-72">
-            <CameraIcon />
-          </div>
-        )}
+        <DestinationPhoto photo={day.photo} loc={day.loc} />
 
         <div className="flex flex-wrap items-start justify-between gap-3 px-4 pt-5 sm:px-6">
-          <h2 className="font-display text-3xl font-bold text-forest sm:text-4xl">
-            {day.loc}
-          </h2>
-          <div className="flex items-center gap-1.5 font-mono text-sm text-ink/70">
-            <CalendarIcon />
-            {formatDMY(day.date)}
-          </div>
+          <DestinationName value={day.loc} />
+          <DestinationDate value={day.date} />
         </div>
 
-        {day.desc && (
-          <p className="px-4 pb-5 pt-3 text-sm leading-relaxed text-ink/80 sm:px-6 sm:text-base">
-            {day.desc}
-          </p>
-        )}
+        <DestinationDescription value={day.desc} />
 
         <div className="mx-4 border-t border-dashed border-ink/40 sm:mx-6" />
 
         <div className="flex items-center justify-between px-4 py-4 sm:px-6">
-          <span className="rounded bg-sage px-3 py-1 font-mono text-xs font-semibold uppercase tracking-widest text-forest">
-            {day.tag}
-          </span>
-          <span className="border-b border-rust/50 pb-0.5 font-mono text-lg font-bold text-rust sm:text-xl">
-            {currency}
-            {day.cost}
-          </span>
+          <DestinationTag value={day.tag} />
+          <DestinationCost value={day.cost} currency={currency} />
         </div>
 
         <div className="flex items-center gap-2 border-t border-ink/30 px-4 pb-4 pt-6 sm:px-6">
