@@ -10,9 +10,19 @@ import DestinationCost from "./DestinationCost";
 import DestinationPhoto from "./DestinationPhoto";
 import { DragHandleIcon, CloseIcon } from "./icons";
 
-export default function StopPanel({ day, index, currency, onRemove }) {
+export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging }) {
   const number = String(index + 1).padStart(2, "0");
   const [confirming, setConfirming] = useState(false);
+
+  const onHandleKeyDown = (e) => {
+    if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      onMoveStop(day.id, -1);
+    } else if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+      e.preventDefault();
+      onMoveStop(day.id, 1);
+    }
+  };
 
   return (
     <div className="mx-auto flex max-w-5xl gap-3 px-4 sm:gap-5 sm:px-6">
@@ -23,7 +33,11 @@ export default function StopPanel({ day, index, currency, onRemove }) {
         </div>
       </div>
 
-      <div className="flex-1 border border-ink/30 bg-parchment">
+      <div
+        className={`flex-1 border bg-parchment transition-[opacity,box-shadow] ${
+          dragging ? "border-forest/60 opacity-70 ring-2 ring-forest/50" : "border-ink/30"
+        }`}
+      >
         <div className="flex items-center justify-between gap-3 border-b border-ink/30 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-ink/60 sm:px-6 sm:text-xs">
           {confirming ? (
             <>
@@ -50,10 +64,17 @@ export default function StopPanel({ day, index, currency, onRemove }) {
             </>
           ) : (
             <>
-              <span className="flex items-center gap-2">
+              <button
+                type="button"
+                onPointerDown={(e) => onDragStart(day.id, e)}
+                onKeyDown={onHandleKeyDown}
+                aria-label={`Reorder ${day.loc || "this stop"} — press up or down arrow keys to move it`}
+                className="flex touch-none select-none items-center gap-2 tracking-widest text-ink/60 transition-colors hover:text-ink active:cursor-grabbing"
+                style={{ cursor: "grab" }}
+              >
                 <DragHandleIcon />
                 Drag to reorder
-              </span>
+              </button>
               <button
                 type="button"
                 onClick={() => setConfirming(true)}

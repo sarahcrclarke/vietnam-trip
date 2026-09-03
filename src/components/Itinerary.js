@@ -1,18 +1,97 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import TransitConnector from "./TransitConnector";
 import StopPanel from "./StopPanel";
 
 // List-level client state for the itinerary's stops. Initialised from JSON
 // (each stop keeps its stable JSON `id`; new stops get a temporary id). No
-// persistence — a refresh restores the original stops. JSON is never mutated:
-// stops are only added/removed at the list level, and each stop's inner state
-// lives in its own child components.
+// persistence — a refresh restores the original stops. JSON is never mutated.
+//
+// Reordering (drag or keyboard) only changes the ORDER of the stops array;
+// stable ids stay the React keys, so stop components are never remounted and
+// all temporary state inside them is preserved.
 export default function Itinerary({ itinerary }) {
   const { currency } = itinerary;
   const [stops, setStops] = useState(() => itinerary.days.map((d) => ({ ...d })));
+  const [draggingId, setDraggingId] = useState(null);
   const seq = useRef(0);
+  const rowRefs = useRef(new Map());
+  const dragIdRef = useRef(null);
+  const dragAbortRef = useRef(null);
+
+  const setRow = (id) => (el) => {
+    if (el) rowRefs.current.set(id, el);
+    else rowRefs.current.delete(id);
+  };
+
+  // Pointer drag (mouse + touch). Only the handle calls this. Listeners are
+  // scoped to an AbortController so they all detach on release/cancel.
+  const startDrag = useCallback((id, e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return; // primary only
+    dragIdRef.current = id;
+    setDraggingId(id);
+    const ac = new AbortController();
+    dragAbortRef.current = ac;
+
+    // Live reorder: place the dragged stop among the others by pointer Y.
+    const onMove = (ev) => {
+      const cur = dragIdRef.current;
+      if (!cur) return;
+      const y = ev.clientY;
+      setStops((prev) => {
+        const from = prev.findIndex((s) => s.id === cur);
+        if (from < 0) return prev;
+        const others = prev.filter((s) => s.id !== cur);
+        let insert = others.length;
+        for (let i = 0; i < others.length; i++) {
+          const el = rowRefs.current.get(others[i].id);
+          if (!el) continue;
+          const r = el.getBoundingClientRect();
+          if (y < r.top + r.height / 2) { insert = i; break; }
+        }
+        const next = others.slice();
+        next.splice(insert, 0, prev[from]);
+        for (let i = 0; i < next.length; i++) if (next[i].id !== prev[i].id) return next;
+        return prev; // order unchanged → no re-render
+      });
+    };
+    const onEnd = () => {
+      dragIdRef.current = null;
+      setDraggingId(null);
+      ac.abort();
+      dragAbortRef.current = null;
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+
+    window.addEventListener("pointermove", onMove, { signal: ac.signal });
+    window.addEventListener("pointerup", onEnd, { signal: ac.signal });
+    window.addEventListener("pointercancel", onEnd, { signal: ac.signal });
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "grabbing";
+  }, []);
+
+  // Keyboard reordering from the focused handle (arrow up/down).
+  const moveStop = useCallback((id, dir) => {
+    setStops((prev) => {
+      const i = prev.findIndex((s) => s.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= prev.length) return prev;
+      const next = prev.slice();
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  }, []);
+
+  useEffect(
+    () => () => {
+      dragAbortRef.current?.abort();
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    },
+    []
+  );
 
   const addStop = () => {
     seq.current += 1;
@@ -33,19 +112,22 @@ export default function Itinerary({ itinerary }) {
         </div>
       ) : (
         stops.map((stop, index) => (
-          <div key={stop.id}>
+          <div key={stop.id} ref={setRow(stop.id)}>
             <TransitConnector transit={stop.transit} currency={currency} />
             <StopPanel
               day={stop}
               index={index}
               currency={currency}
               onRemove={removeStop}
+              onDragStart={startDrag}
+              onMoveStop={moveStop}
+              dragging={draggingId === stop.id}
             />
           </div>
         ))
       )}
 
-      {/* + ADD STOP — sits on the timeline as a restrained dashed node. */}
+      {/* + ADD STOP — appends to the current end of the itinerary. */}
       <div className="mx-auto flex max-w-5xl gap-3 px-4 pt-4 sm:gap-5 sm:px-6">
         <div className="relative w-12 flex-none sm:w-16">
           {stops.length > 0 && (
