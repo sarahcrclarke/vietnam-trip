@@ -68,7 +68,7 @@ export default function TravellerAvatars({ travellers, onChange, compact = false
   const compactOverflow = compact ? included.length - 2 : overflow;
   const avatarSize = compact ? "h-5 w-5 text-[9px]" : "h-7 w-7 text-xs";
   const avatarBorder = compact ? "border" : "border-2";
-  const avatarSpacing = compact ? "-space-x-1.5" : "-space-x-2";
+  const avatarSpacing = compact ? "gap-1" : "gap-1.5";
 
   return (
     <div className="relative" ref={rootRef}>
