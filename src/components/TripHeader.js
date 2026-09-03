@@ -1,21 +1,27 @@
 import { formatDMY } from "@/lib/date";
+import TravellerAvatars from "./TravellerAvatars";
 
 // Displayed trip title — the JSON keeps its original "Việt Nam", but the
 // approved heading text is "Vietnam"; the source file is never edited.
 const DISPLAY_TITLE = "Vietnam";
 
-// Departure date, return date and traveller count are lifted to TripPlanner
-// (the return date also drives the final destination's derived duration in
-// Itinerary), so this component just renders them with the handlers it's given.
+// Departure date, return date and the traveller list are lifted to
+// TripPlanner (the return date also drives the final destination's derived
+// duration in Itinerary; the traveller list will be needed by voting and
+// transport assignment later), so this component just renders them with the
+// handlers it's given. The "X people" count is derived from included
+// travellers — it's no longer an independently editable value.
 export default function TripHeader({
   subtitle,
   depart,
   onDepartChange,
   returnDate,
   onReturnChange,
-  travelers,
-  onTravelersChange,
+  travellers,
+  onTravellersChange,
 }) {
+  const travellerCount = travellers.filter((t) => t.included).length;
+
   return (
     <header className="border-b border-border">
       {/* Top navigation bar */}
@@ -42,17 +48,7 @@ export default function TripHeader({
             </button>
           </div>
         </div>
-        <div className="flex gap-2">
-          <div className="h-7 w-7 rounded-full bg-forest/20 flex items-center justify-center text-xs font-bold text-forest">
-            S
-          </div>
-          <div className="h-7 w-7 rounded-full bg-rust/20 flex items-center justify-center text-xs font-bold text-rust">
-            D
-          </div>
-          <div className="h-7 w-7 rounded-full bg-sage/30 flex items-center justify-center text-xs font-bold text-stone">
-            R
-          </div>
-        </div>
+        <TravellerAvatars travellers={travellers} onChange={onTravellersChange} />
       </nav>
 
       {/* Header content */}
@@ -86,19 +82,8 @@ export default function TripHeader({
             />
           </span>
           <span aria-hidden>&middot;</span>
-          <span className="relative inline-flex rounded-sm px-0.5 -mx-0.5 transition-colors hover:bg-stone/10 focus-within:bg-stone/10 focus-within:ring-1 focus-within:ring-forest/25">
-            {travelers} {travelers === 1 ? "person" : "people"}
-            <input
-              type="number"
-              min={1}
-              value={travelers}
-              onChange={(e) => {
-                const n = parseInt(e.target.value, 10);
-                onTravelersChange(Number.isNaN(n) || n < 1 ? 1 : n);
-              }}
-              aria-label="Number of travellers"
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-            />
+          <span>
+            {travellerCount} {travellerCount === 1 ? "person" : "people"}
           </span>
         </p>
       </div>

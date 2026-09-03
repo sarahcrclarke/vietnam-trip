@@ -3,23 +3,19 @@
 import { useState } from "react";
 import TripHeader from "./TripHeader";
 import Itinerary from "./Itinerary";
+import { INITIAL_TRAVELLERS } from "@/lib/travellers";
 
-// Extracts the leading number from the JSON's traveller string (e.g.
-// "5 people") so it can be edited as a plain numeric value; defaults to 1.
-function parseTravelerCount(raw) {
-  const match = String(raw ?? "").match(/\d+/);
-  const n = match ? parseInt(match[0], 10) : NaN;
-  return Number.isNaN(n) || n < 1 ? 1 : n;
-}
-
-// Owns the trip-level dates and traveller count. The return date is threaded
-// down into Itinerary because the final destination's derived duration is
-// calculated against it — everything else here is local to the header.
-// Client-side only; no persistence, so a refresh restores the JSON values.
+// Owns the trip-level dates and the traveller list. The return date is
+// threaded down into Itinerary because the final destination's derived
+// duration is calculated against it. Travellers live here (not inside the
+// header) because activity voting, transport traveller assignment and
+// cost-per-person will all need the same list in later passes.
+// Client-side only; no persistence, so a refresh restores the JSON/seed
+// values.
 export default function TripPlanner({ itinerary }) {
   const [depart, setDepart] = useState(itinerary.depart ?? "");
   const [returnDate, setReturnDate] = useState(itinerary.return ?? "");
-  const [travelers, setTravelers] = useState(() => parseTravelerCount(itinerary.travelers));
+  const [travellers, setTravellers] = useState(INITIAL_TRAVELLERS);
 
   return (
     <>
@@ -29,8 +25,8 @@ export default function TripPlanner({ itinerary }) {
         onDepartChange={setDepart}
         returnDate={returnDate}
         onReturnChange={setReturnDate}
-        travelers={travelers}
-        onTravelersChange={setTravelers}
+        travellers={travellers}
+        onTravellersChange={setTravellers}
       />
       <Itinerary itinerary={itinerary} tripReturnDate={returnDate} />
     </>
