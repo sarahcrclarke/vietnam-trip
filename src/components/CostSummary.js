@@ -53,21 +53,68 @@ export default function CostSummary({ stops, extraCosts, onExtraCostsChange, tra
   };
 
   return (
-    <div className="mx-auto w-full max-w-editorial border-t border-border px-4 py-12 sm:px-6 sm:py-16">
-      <p className="text-center font-sans text-xs font-semibold uppercase tracking-widest text-stone/50">
-        Trip Cost Summary
-      </p>
-
-      {/* Extra trip costs — editable, seeded from itinerary.extraCosts. */}
-      <div className="mx-auto mt-8 max-w-md">
-        <p className="font-sans text-[11px] font-semibold uppercase tracking-widest text-forest">
-          Extra trip costs
+    <div className="mx-auto w-full max-w-editorial border-t border-border px-4 py-12 sm:px-6 sm:py-20">
+      {/* Trip Summary Header */}
+      <div className="mb-12 text-center">
+        <p className="font-sans text-[10px] font-semibold uppercase tracking-widest text-stone/50 mb-6">
+          Trip Summary
         </p>
-        <div className="mt-2">
+
+        {/* Trip Total — The Star of the Show */}
+        <div className="mb-8">
+          <div className="font-display text-5xl font-bold text-forest mb-4">
+            {currency}{formatMoney(grandTotal)}
+          </div>
+          <p className="font-sans text-sm text-muted">
+            {perPerson != null
+              ? `${currency}${perPerson.toFixed(2)} per person · ${includedCount} ${includedCount === 1 ? "traveller" : "travellers"}`
+              : "—"}
+          </p>
+        </div>
+      </div>
+
+      {/* Category Breakdown — Restrained and Editorial */}
+      <div className="mx-auto mb-16 max-w-sm">
+        <div className="space-y-3 font-sans text-sm">
+          <div className="flex items-baseline justify-between gap-4 pb-2">
+            <dt className="uppercase tracking-wide text-stone/60">Destinations</dt>
+            <dd className="text-foreground font-medium">
+              {currency}{formatMoney(destinationTotal)}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-4 pb-2">
+            <dt className="uppercase tracking-wide text-stone/60">Transport</dt>
+            <dd className="text-foreground font-medium">
+              {currency}{formatMoney(transportTotal)}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-4 pb-2">
+            <dt className="uppercase tracking-wide text-stone/60">Activities</dt>
+            <dd className="text-foreground font-medium">
+              {currency}{formatMoney(activityTotal)}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-4 border-t border-border pt-3">
+            <dt className="uppercase tracking-wide text-stone/60">Extras</dt>
+            <dd className="text-foreground font-medium">
+              {currency}{formatMoney(extrasTotal)}
+            </dd>
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Costs Section */}
+      <div className="mx-auto max-w-sm border-t border-border pt-8">
+        <p className="mb-4 font-sans text-[10px] font-semibold uppercase tracking-widest text-stone/50">
+          Additional Costs
+        </p>
+
+        {/* Editable extra costs */}
+        <div className="mb-4 space-y-2">
           {extraCosts.map((extra) => (
             <div
               key={extra.id}
-              className="flex items-center gap-2 border-b border-border py-1.5 last:border-0"
+              className="flex items-center gap-3 rounded-sm px-2 py-1.5 hover:bg-stone/[0.03]"
             >
               <input
                 type="text"
@@ -75,10 +122,10 @@ export default function CostSummary({ stops, extraCosts, onExtraCostsChange, tra
                 onChange={(e) => updateExtra(extra.id, { label: e.target.value })}
                 placeholder="Label"
                 aria-label="Extra cost label"
-                className="min-w-0 flex-1 rounded-sm bg-transparent px-1 -mx-1 font-sans text-sm text-foreground placeholder:text-stone/35 hover:bg-stone/[0.06] focus:bg-stone/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/25"
+                className="min-w-0 flex-1 bg-transparent font-sans text-sm text-foreground placeholder:text-stone/35 focus:outline-none focus:ring-1 focus:ring-forest/25 rounded-sm px-1 -mx-1"
               />
-              <span className="flex flex-none items-baseline gap-0.5 font-sans text-sm font-semibold text-rust">
-                <span>{currency}</span>
+              <span className="flex flex-none items-baseline gap-0.5 font-sans text-sm font-medium text-rust">
+                <span className="text-xs">{currency}</span>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -86,84 +133,29 @@ export default function CostSummary({ stops, extraCosts, onExtraCostsChange, tra
                   onChange={(e) => onAmountChange(extra.id, e.target.value)}
                   placeholder="0"
                   aria-label="Extra cost amount"
-                  className="w-14 rounded-sm bg-transparent px-1 -mx-1 text-right placeholder:text-rust/40 hover:bg-stone/10 focus:bg-stone/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/25"
+                  className="w-12 bg-transparent text-right placeholder:text-rust/40 focus:outline-none focus:ring-1 focus:ring-forest/25 rounded-sm px-1 -mx-1"
                 />
               </span>
               <button
                 type="button"
                 onClick={() => removeExtra(extra.id)}
                 aria-label={`Remove ${extra.label || "extra cost"}`}
-                className="flex-none text-stone/35 transition-colors hover:text-rust"
+                className="flex-none text-stone/30 transition-colors hover:text-rust"
               >
-                &#10005;
+                ✕
               </button>
             </div>
           ))}
         </div>
+
+        {/* Add button */}
         <button
           type="button"
           onClick={addExtra}
-          className="mt-2 font-sans text-xs text-stone/50 transition-colors hover:text-forest"
+          className="font-sans text-xs text-stone/50 transition-colors hover:text-forest"
         >
-          + Add extra cost
+          + Add cost
         </button>
-      </div>
-
-      {/* Category subtotals + grand total. */}
-      <div className="mx-auto mt-10 max-w-md">
-        <dl className="space-y-2 font-sans text-sm">
-          <div className="flex items-center justify-between">
-            <dt className="uppercase tracking-wide text-muted">Destinations</dt>
-            <dd className="text-foreground">
-              {currency}
-              {formatMoney(destinationTotal)}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="uppercase tracking-wide text-muted">Transport</dt>
-            <dd className="text-foreground">
-              {currency}
-              {formatMoney(transportTotal)}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="uppercase tracking-wide text-muted">Activities</dt>
-            <dd className="text-foreground">
-              {currency}
-              {formatMoney(activityTotal)}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="uppercase tracking-wide text-muted">Extras</dt>
-            <dd className="text-foreground">
-              {currency}
-              {formatMoney(extrasTotal)}
-            </dd>
-          </div>
-        </dl>
-
-        <div className="mt-4 flex items-baseline justify-between border-t border-border pt-4">
-          <span className="font-sans text-xs font-semibold uppercase tracking-widest text-forest">
-            Trip Total
-          </span>
-          <span className="font-display text-3xl font-bold text-forest sm:text-4xl">
-            {currency}
-            {formatMoney(grandTotal)}
-          </span>
-        </div>
-      </div>
-
-      {/* Cost per person, from the shared traveller list. */}
-      <div className="mx-auto mt-10 max-w-md text-center">
-        <p className="font-sans text-xs uppercase tracking-widest text-muted">
-          {includedCount} {includedCount === 1 ? "traveller" : "travellers"}
-        </p>
-        <p className="mt-1 font-display text-2xl font-bold text-rust sm:text-3xl">
-          {perPerson != null ? `${currency}${perPerson.toFixed(2)}` : "—"}
-          <span className="ml-1.5 font-sans text-xs font-semibold uppercase tracking-widest text-rust/70">
-            per person
-          </span>
-        </p>
       </div>
     </div>
   );
