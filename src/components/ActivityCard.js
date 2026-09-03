@@ -9,6 +9,7 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
   const { name, link, cost, image, votes } = activity;
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
   // Name is always editable — existing JSON names and newly-added activities
   // both edit the same client-side state. No persistence; a refresh restores
   // the JSON value.
@@ -27,6 +28,22 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
     },
     []
   );
+
+  useEffect(() => {
+    if (!showMenu) return undefined;
+    const onPointerDown = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+    };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setShowMenu(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showMenu]);
 
   const openPicker = () => fileRef.current?.click();
 
@@ -75,7 +92,7 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
         )}
 
         {/* Restrained utility menu — replaces permanently-visible controls. */}
-        <div className="absolute right-1.5 top-1.5">
+        <div className="absolute right-1.5 top-1.5" ref={menuRef}>
           <button
             type="button"
             onClick={() => setShowMenu((v) => !v)}
@@ -89,8 +106,8 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
               <button
                 type="button"
                 onClick={() => {
-                  setShowMenu(false);
                   openPicker();
+                  setShowMenu(false);
                 }}
                 className="block w-full text-left text-xs text-muted transition-colors hover:text-forest"
               >
@@ -100,8 +117,8 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
                 <button
                   type="button"
                   onClick={() => {
-                    setShowMenu(false);
                     removePhoto();
+                    setShowMenu(false);
                   }}
                   className="block w-full text-left text-xs text-rust transition-colors hover:text-rust/80"
                 >
@@ -112,8 +129,8 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
               <button
                 type="button"
                 onClick={() => {
-                  setShowMenu(false);
                   setConfirming(true);
+                  setShowMenu(false);
                 }}
                 className="block w-full text-left text-xs font-medium text-rust transition-colors hover:text-rust/80"
               >

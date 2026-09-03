@@ -267,7 +267,7 @@ function LegRow({ leg, currency, travellers, isFirstRow, isLastRow, onUpdate, on
     <div className="flex gap-6">
       <div className="relative w-12 flex-none sm:w-16">
         <div className={lineClass(isFirstRow, isLastRow)} />
-        <div className="relative z-10 mx-auto flex h-11 w-11 items-center justify-center text-stone/70 sm:h-14 sm:w-14">
+        <div className="sticky top-[40vh] z-10 mx-auto flex h-11 w-11 items-center justify-center text-stone/70 sm:h-14 sm:w-14">
           <TransportIcon mode={leg.mode} />
         </div>
       </div>
@@ -368,7 +368,7 @@ function StopoverRow({ stopover, isFirstRow, isLastRow, onUpdate, onRemove }) {
     <div className="flex gap-6">
       <div className="relative w-12 flex-none sm:w-16">
         <div className={lineClass(isFirstRow, isLastRow)} />
-        <div className="relative z-10 mx-auto flex h-11 w-11 items-center justify-center text-stone/50 sm:h-14 sm:w-14">
+        <div className="sticky top-[40vh] z-10 mx-auto flex h-11 w-11 items-center justify-center text-stone/50 sm:h-14 sm:w-14">
           <span aria-hidden className="text-lg sm:text-xl">
             &#9671;
           </span>

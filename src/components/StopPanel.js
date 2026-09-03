@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ActivityGrid from "./ActivityGrid";
 import DestinationName from "./DestinationName";
 import DestinationDate from "./DestinationDate";
@@ -8,11 +8,13 @@ import DestinationDescription from "./DestinationDescription";
 import DestinationTag from "./DestinationTag";
 import DestinationCost from "./DestinationCost";
 import DestinationPhoto from "./DestinationPhoto";
+import { DragHandleIcon } from "./icons";
 
 export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onDateChange, onCostChange, onActivitiesChange, duration, travellers }) {
   const number = String(index + 1).padStart(2, "0");
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
 
   const onHandleKeyDown = (e) => {
     if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
@@ -23,6 +25,22 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
       onMoveStop(day.id, 1);
     }
   };
+
+  useEffect(() => {
+    if (!showMenu) return undefined;
+    const onPointerDown = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+    };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setShowMenu(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showMenu]);
 
   return (
     <div className="mx-auto w-full max-w-editorial px-4 sm:px-6">
@@ -48,6 +66,21 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
             dragging ? "opacity-60" : ""
           }`}
         >
+          {/* Visible drag-to-reorder control — above the photo */}
+          <div className="flex items-center gap-2 px-4 pt-4 sm:px-6">
+            <button
+              type="button"
+              onPointerDown={(e) => onDragStart(day.id, e)}
+              onKeyDown={onHandleKeyDown}
+              aria-label={`Drag to reorder ${day.loc || "this stop"} — press up or down arrow keys to move it`}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-stone/50 transition-colors hover:text-forest"
+              style={{ cursor: "grab" }}
+            >
+              <DragHandleIcon className="h-3.5 w-3.5" />
+              <span>Drag to reorder</span>
+            </button>
+          </div>
+
           {/* Photo section */}
           <DestinationPhoto photo={day.photo} loc={day.loc} />
 
@@ -63,7 +96,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
               </div>
 
               {/* Menu button */}
-              <div className="relative flex-none">
+              <div className="relative flex-none" ref={menuRef}>
                 <button
                   type="button"
                   onClick={() => setShowMenu(!showMenu)}
@@ -74,16 +107,6 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
                 </button>
                 {showMenu && (
                   <div className="absolute right-0 top-full mt-1 space-y-1 rounded bg-background border border-border px-2 py-1 shadow-sm z-10">
-                    <button
-                      type="button"
-                      onPointerDown={(e) => onDragStart(day.id, e)}
-                      onKeyDown={onHandleKeyDown}
-                      aria-label={`Reorder ${day.loc || "this stop"} — press up or down arrow keys to move it`}
-                      className="block w-full text-left px-2 py-1 text-sm text-muted hover:text-forest transition-colors"
-                      style={{ cursor: "grab" }}
-                    >
-                      ↕ Reorder
-                    </button>
                     <button
                       type="button"
                       onClick={() => {
