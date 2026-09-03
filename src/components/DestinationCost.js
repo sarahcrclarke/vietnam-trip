@@ -1,19 +1,17 @@
-"use client";
-
-import { useState } from "react";
-
 // Non-negative monetary value; empty allowed while editing; invalid text
 // rejected. Matches the activity-cost rules.
 const COST_RE = /^\d*\.?\d{0,2}$/;
 
 // Editable destination cost. £ kept as a separate span, flush against the
-// value (no gap). Keeps the rust, bold, border-b treatment and right alignment.
-export default function DestinationCost({ value, currency }) {
-  const [cost, setCost] = useState(value != null ? String(value) : "");
+// value (no gap). Keeps the rust, bold treatment and right alignment.
+// Controlled by Itinerary's stops state (not local) because the trip cost
+// summary needs every destination's live cost to compute its subtotal.
+export default function DestinationCost({ value, onChange, currency }) {
+  const cost = value ?? "";
 
-  const onChange = (e) => {
+  const handleChange = (e) => {
     const next = e.target.value;
-    if (COST_RE.test(next)) setCost(next);
+    if (COST_RE.test(next)) onChange(next);
   };
 
   return (
@@ -28,7 +26,7 @@ export default function DestinationCost({ value, currency }) {
           inputMode="decimal"
           size={1}
           value={cost}
-          onChange={onChange}
+          onChange={handleChange}
           aria-label="Destination cost"
           className="col-start-1 row-start-1 w-full min-w-0 bg-transparent focus:outline-none"
         />

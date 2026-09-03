@@ -5,7 +5,7 @@ import { CameraIcon } from "./icons";
 import ActivityVotes from "./ActivityVotes";
 import ActivityFields from "./ActivityFields";
 
-export default function ActivityCard({ activity, currency, voters, unanimous, onToggleVote, onRemove }) {
+export default function ActivityCard({ activity, currency, voters, unanimous, onToggleVote, onCostChange, onRemove }) {
   const { name, link, cost, image, votes } = activity;
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -176,7 +176,13 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
         }`}
       />
 
-      <ActivityFields link={link} cost={cost} travelTime={activity.travelTime} currency={currency} />
+      <ActivityFields
+        link={link}
+        cost={cost}
+        onCostChange={onCostChange}
+        travelTime={activity.travelTime}
+        currency={currency}
+      />
 
       <ActivityVotes voters={voters} votes={votes} onToggle={onToggleVote} />
     </div>

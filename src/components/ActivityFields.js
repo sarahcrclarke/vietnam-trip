@@ -28,14 +28,18 @@ function normalizeUrl(raw) {
 // stays very quiet (no border, no boxed placeholder) when empty, so a card
 // with nothing filled in doesn't look like an unfinished form. Still fully
 // editable; hover/focus give a restrained cue rather than a permanent outline.
-export default function ActivityFields({ link, cost, travelTime, currency }) {
+//
+// Cost is controlled by the parent (ActivityGrid, via Itinerary's stops
+// state) because the trip cost summary needs every activity's live cost;
+// link and travel time stay local — nothing outside this card needs them.
+export default function ActivityFields({ link, cost, onCostChange, travelTime, currency }) {
   const [linkVal, setLinkVal] = useState(link ?? "");
-  const [costVal, setCostVal] = useState(cost ? String(cost) : "");
   const [travelTimeVal, setTravelTimeVal] = useState(travelTime ?? "");
+  const costVal = cost ?? "";
 
-  const onCostChange = (e) => {
+  const handleCostChange = (e) => {
     const next = e.target.value;
-    if (COST_RE.test(next)) setCostVal(next); // otherwise ignore the keystroke
+    if (COST_RE.test(next)) onCostChange(next); // otherwise ignore the keystroke
   };
 
   const hasLink = linkVal !== "";
@@ -84,7 +88,7 @@ export default function ActivityFields({ link, cost, travelTime, currency }) {
           type="text"
           inputMode="decimal"
           value={costVal}
-          onChange={onCostChange}
+          onChange={handleCostChange}
           placeholder="cost"
           aria-label="Activity cost"
           className={`w-full rounded-sm bg-transparent focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/30 ${

@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Journey, { transitToJourney } from "./Journey";
 import StopPanel from "./StopPanel";
+import CostSummary from "./CostSummary";
 import { daysBetween, formatDuration } from "@/lib/duration";
+import { migrateVotes } from "@/lib/voting";
 
 // List-level client state for the itinerary's stops. Initialised from JSON
 // (each stop keeps its stable JSON `id`; new stops get a temporary id). No
@@ -13,19 +15,35 @@ import { daysBetween, formatDuration } from "@/lib/duration";
 // stable ids stay the React keys, so stop components are never remounted and
 // all temporary state inside them is preserved.
 //
-// Each stop's `date` is controlled here (not owned locally by the date input)
-// because a destination's duration is derived from its own date through the
-// NEXT stop's date (or the trip's return date for the final stop) — editing
-// any date must immediately recompute every affected duration.
-export default function Itinerary({ itinerary, tripReturnDate, travellers }) {
+// A stop's `date`, `cost`, `journey` and `activities` are controlled here
+// (not owned locally by their editors) because: a destination's duration is
+// derived from its own date through the NEXT stop's date; and the trip cost
+// summary needs every destination's cost, every transport leg's cost across
+// every journey, and every activity's cost — all live, all in one place, so
+// the summary can never drift out of sync with the editing UI. Everything
+// else (name, description, tag, photo, activity name/link/image/travel time)
+// stays local to its own component, unchanged.
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
-  // so no existing transport mode, description or cost is lost.
+  // so no existing transport mode, description or cost is lost. Destination
+  // cost is normalised to a string (matching how the cost input holds it);
+  // activity votes are migrated from the legacy name-keyed true/false/null
+  // shape into a binary shape keyed by stable traveller id.
   const [stops, setStops] = useState(() =>
     itinerary.days.map((d) => {
-      const { transit, ...rest } = d;
-      return { ...rest, journey: transitToJourney(transit) };
+      const { transit, activities, cost, ...rest } = d;
+      return {
+        ...rest,
+        cost: cost != null ? String(cost) : "",
+        journey: transitToJourney(transit),
+        activities: activities.map((a) => ({
+          ...a,
+          cost: a.cost ? String(a.cost) : "",
+          votes: migrateVotes(a.votes),
+        })),
+      };
     })
   );
   const [draggingId, setDraggingId] = useState(null);
@@ -112,7 +130,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers }) {
     const id = `new-stop-${Date.now()}-${seq.current}`;
     setStops((prev) => [
       ...prev,
-      { id, loc: "", date: "", desc: "", tag: "", cost: 0, photo: null, journey: [], activities: [] },
+      { id, loc: "", date: "", desc: "", tag: "", cost: "0", photo: null, journey: [], activities: [] },
     ]);
   };
 
@@ -120,6 +138,21 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers }) {
 
   const updateDate = useCallback(
     (id, date) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, date } : s))),
+    []
+  );
+
+  const updateCost = useCallback(
+    (id, cost) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, cost } : s))),
+    []
+  );
+
+  const updateJourney = useCallback(
+    (id, journey) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, journey } : s))),
+    []
+  );
+
+  const updateActivities = useCallback(
+    (id, activities) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, activities } : s))),
     []
   );
 
@@ -136,7 +169,12 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers }) {
             const duration = formatDuration(daysBetween(stop.date, nextDate));
             return (
               <div key={stop.id} ref={setRow(stop.id)}>
-                <Journey initialJourney={stop.journey} currency={currency} isFirst={index === 0} />
+                <Journey
+                  journey={stop.journey}
+                  onChange={(journey) => updateJourney(stop.id, journey)}
+                  currency={currency}
+                  isFirst={index === 0}
+                />
                 <StopPanel
                   day={stop}
                   index={index}
@@ -146,6 +184,8 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers }) {
                   onMoveStop={moveStop}
                   dragging={draggingId === stop.id}
                   onDateChange={updateDate}
+                  onCostChange={(cost) => updateCost(stop.id, cost)}
+                  onActivitiesChange={(activities) => updateActivities(stop.id, activities)}
                   duration={duration}
                   travellers={travellers}
                 />
@@ -177,6 +217,16 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers }) {
           </div>
         </div>
       </div>
+
+      {/* Trip cost summary — reads live totals straight from `stops` above,
+          plus the trip-level extra costs and traveller list. */}
+      <CostSummary
+        stops={stops}
+        extraCosts={extraCosts}
+        onExtraCostsChange={onExtraCostsChange}
+        travellers={travellers}
+        currency={currency}
+      />
     </div>
   );
 }

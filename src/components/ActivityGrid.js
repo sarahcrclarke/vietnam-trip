@@ -2,25 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import ActivityCard from "./ActivityCard";
-import { migrateVotes, isUnanimous } from "@/lib/voting";
+import { isUnanimous } from "@/lib/voting";
 import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
 
-// Client-side list state for ONE destination's activities. Initial data comes
-// from JSON (copied, never mutated); no persistence, so a refresh restores it.
-// Votes are migrated once, up front, from the legacy name-keyed
-// true/false/null shape into a binary shape keyed by stable traveller id.
-//
-// Votes live here (not inside each ActivityCard) because unanimity — and
-// therefore which activities float to the top — depends on comparing every
-// activity's votes against the current voter list at once.
+// Controlled by Itinerary's stops state (not local) because the trip cost
+// summary needs every activity's live cost across every destination to
+// compute its subtotal, and unanimity needs every activity's votes compared
+// against the current voter list at once. No persistence — a refresh
+// restores the original activities.
 //
 // Layout: a native CSS-grid carousel (grid-auto-flow: column) rather than a
 // tall grid or a carousel library — two rows on desktop, one larger row on
 // mobile, continuing sideways into a horizontally-scrollable track.
-export default function ActivityGrid({ activities, currency, loc, travellers }) {
-  const [list, setList] = useState(() =>
-    activities.map((a) => ({ ...a, votes: migrateVotes(a.votes) }))
-  );
+export default function ActivityGrid({ activities, onChange, currency, loc, travellers }) {
   const seq = useRef(0);
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -35,30 +29,32 @@ export default function ActivityGrid({ activities, currency, loc, travellers }) 
   const addActivity = () => {
     seq.current += 1;
     const id = `new-${Date.now()}-${seq.current}`;
-    setList((prev) => [
-      ...prev,
-      { id, name: "", link: "", cost: 0, image: null, travelTime: "", votes: {} },
+    onChange([
+      ...activities,
+      { id, name: "", link: "", cost: "", image: null, travelTime: "", votes: {} },
     ]);
   };
 
-  const removeActivity = (id) =>
-    setList((prev) => prev.filter((a) => a.id !== id));
+  const removeActivity = (id) => onChange(activities.filter((a) => a.id !== id));
 
   const toggleVote = (activityId, travellerId) =>
-    setList((prev) =>
-      prev.map((a) =>
+    onChange(
+      activities.map((a) =>
         a.id === activityId
           ? { ...a, votes: { ...a.votes, [travellerId]: !a.votes[travellerId] } }
           : a
       )
     );
 
+  const updateCost = (activityId, cost) =>
+    onChange(activities.map((a) => (a.id === activityId ? { ...a, cost } : a)));
+
   // Unanimous activities float to the top, keeping their existing relative
   // order; everyone else keeps their existing relative order too — nothing
   // beyond promoting the unanimous ones is reshuffled. Recomputed from live
   // state every render, so gaining/losing unanimity reorders automatically.
-  const unanimousActivities = list.filter((a) => isUnanimous(a.votes, voters));
-  const otherActivities = list.filter((a) => !isUnanimous(a.votes, voters));
+  const unanimousActivities = activities.filter((a) => isUnanimous(a.votes, voters));
+  const otherActivities = activities.filter((a) => !isUnanimous(a.votes, voters));
   const displayList = [...unanimousActivities, ...otherActivities];
 
   const updateScrollState = () => {
@@ -101,6 +97,7 @@ export default function ActivityGrid({ activities, currency, loc, travellers }) 
             voters={voters}
             unanimous={isUnanimous(activity.votes, voters)}
             onToggleVote={(travellerId) => toggleVote(activity.id, travellerId)}
+            onCostChange={(cost) => updateCost(activity.id, cost)}
             onRemove={removeActivity}
           />
         ))}

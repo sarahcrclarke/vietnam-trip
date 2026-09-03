@@ -9,7 +9,7 @@ import DestinationTag from "./DestinationTag";
 import DestinationCost from "./DestinationCost";
 import DestinationPhoto from "./DestinationPhoto";
 
-export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onDateChange, duration, travellers }) {
+export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onDateChange, onCostChange, onActivitiesChange, duration, travellers }) {
   const number = String(index + 1).padStart(2, "0");
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -109,7 +109,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
                 )}
                 <DestinationTag value={duration} />
               </div>
-              <DestinationCost value={day.cost} currency={currency} />
+              <DestinationCost value={day.cost} onChange={onCostChange} currency={currency} />
             </div>
 
             {/* Description */}
@@ -125,6 +125,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
               </div>
               <ActivityGrid
                 activities={day.activities}
+                onChange={onActivitiesChange}
                 currency={currency}
                 loc={day.loc}
                 travellers={travellers}

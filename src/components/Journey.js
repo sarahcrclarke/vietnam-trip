@@ -336,37 +336,37 @@ function ControlsRow({ isFirstRow, isLastRow, onAddLeg, onAddStopover }) {
 }
 
 // The journey INTO a stop — an ordered sequence of transport legs and
-// optional stopovers between it and the previous destination. Local,
-// uncontrolled client state (seeded once from the migrated transit data);
-// no persistence, so a refresh restores the original single-leg journey.
+// optional stopovers between it and the previous destination. Controlled by
+// Itinerary's stops state (not local) because the trip cost summary needs
+// every leg's live cost across every journey to compute its subtotal.
+// No persistence — a refresh restores the original single-leg journey.
 // Because this renders inside the stop's keyed wrapper, it moves with the
 // stop on reorder and is never remounted.
-export default function Journey({ initialJourney, currency, isFirst }) {
-  const [items, setItems] = useState(initialJourney);
+export default function Journey({ journey, onChange, currency, isFirst }) {
   const seq = useRef(0);
 
   const updateItem = (id, patch) =>
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+    onChange(journey.map((it) => (it.id === id ? { ...it, ...patch } : it)));
 
-  const removeItem = (id) => setItems((prev) => prev.filter((it) => it.id !== id));
+  const removeItem = (id) => onChange(journey.filter((it) => it.id !== id));
 
   const addLeg = () => {
     seq.current += 1;
-    setItems((prev) => [...prev, makeLeg({ id: `leg-${Date.now()}-${seq.current}` })]);
+    onChange([...journey, makeLeg({ id: `leg-${Date.now()}-${seq.current}` })]);
   };
 
   const addStopover = () => {
     seq.current += 1;
-    setItems((prev) => [...prev, makeStopover({ id: `stopover-${Date.now()}-${seq.current}` })]);
+    onChange([...journey, makeStopover({ id: `stopover-${Date.now()}-${seq.current}` })]);
   };
 
   // The first stop's inbound journey is optional and not shown by default —
   // no journey precedes it. If it has one anyway, still render it normally.
-  if (isFirst && items.length === 0) return null;
+  if (isFirst && journey.length === 0) return null;
 
   return (
     <div className="mx-auto w-full max-w-editorial px-4 py-4 sm:px-6 sm:py-5">
-      {items.map((item, i) =>
+      {journey.map((item, i) =>
         item.type === "leg" ? (
           <LegRow
             key={item.id}
@@ -389,7 +389,7 @@ export default function Journey({ initialJourney, currency, isFirst }) {
         )
       )}
       <ControlsRow
-        isFirstRow={items.length === 0}
+        isFirstRow={journey.length === 0}
         isLastRow
         onAddLeg={addLeg}
         onAddStopover={addStopover}
