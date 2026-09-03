@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import ActivityGrid from "./ActivityGrid";
 import DestinationName from "./DestinationName";
 import DestinationDate from "./DestinationDate";
@@ -7,8 +10,9 @@ import DestinationCost from "./DestinationCost";
 import DestinationPhoto from "./DestinationPhoto";
 import { DragHandleIcon, CloseIcon } from "./icons";
 
-export default function StopPanel({ day, index, currency }) {
+export default function StopPanel({ day, index, currency, onRemove }) {
   const number = String(index + 1).padStart(2, "0");
+  const [confirming, setConfirming] = useState(false);
 
   return (
     <div className="mx-auto flex max-w-5xl gap-3 px-4 sm:gap-5 sm:px-6">
@@ -20,15 +24,46 @@ export default function StopPanel({ day, index, currency }) {
       </div>
 
       <div className="flex-1 border border-ink/30 bg-parchment">
-        <div className="flex items-center justify-between border-b border-ink/30 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-ink/60 sm:px-6 sm:text-xs">
-          <span className="flex items-center gap-2">
-            <DragHandleIcon />
-            Drag to reorder
-          </span>
-          <span className="flex items-center gap-1 text-rust/80">
-            <CloseIcon />
-            Remove stop
-          </span>
+        <div className="flex items-center justify-between gap-3 border-b border-ink/30 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-ink/60 sm:px-6 sm:text-xs">
+          {confirming ? (
+            <>
+              <span className="min-w-0 flex-1 normal-case tracking-normal text-ink/80">
+                Remove{" "}
+                {day.loc ? `“${day.loc}” and all of its activities` : "this stop"}?
+              </span>
+              <span className="flex flex-none items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  className="border border-dashed border-ink/40 px-2 py-0.5 tracking-widest text-ink/70 transition-colors hover:border-ink/70"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRemove(day.id)}
+                  className="border border-dashed border-rust/60 px-2 py-0.5 font-semibold tracking-widest text-rust transition-colors hover:border-rust"
+                >
+                  Remove
+                </button>
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="flex items-center gap-2">
+                <DragHandleIcon />
+                Drag to reorder
+              </span>
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                className="flex items-center gap-1 text-rust/80 transition-colors hover:text-rust"
+              >
+                <CloseIcon />
+                Remove stop
+              </button>
+            </>
+          )}
         </div>
 
         <DestinationPhoto photo={day.photo} loc={day.loc} />
@@ -52,7 +87,7 @@ export default function StopPanel({ day, index, currency }) {
             ☆
           </span>
           <h3 className="font-mono text-xs font-semibold uppercase tracking-[0.2em] text-forest sm:text-sm">
-            Things to do in {day.loc}
+            Things to do in {day.loc || "this stop"}
           </h3>
         </div>
 

@@ -30,7 +30,7 @@ export default function DestinationCost({ value, currency }) {
           value={cost}
           onChange={onChange}
           aria-label="Destination cost"
-          className="col-start-1 row-start-1 w-full min-w-0 bg-transparent text-right focus:outline-none"
+          className="col-start-1 row-start-1 w-full min-w-0 bg-transparent focus:outline-none"
         />
       </span>
     </span>
