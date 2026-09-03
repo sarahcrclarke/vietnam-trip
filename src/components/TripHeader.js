@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { formatDMY } from "@/lib/date";
 import TravellerAvatars from "./TravellerAvatars";
 import MobileNav from "./MobileNav";
@@ -14,8 +14,7 @@ const DISPLAY_TITLE = "Vietnam";
 // TripPlanner (the return date also drives the final destination's derived
 // duration in Itinerary; the traveller list will be needed by voting and
 // transport assignment later), so this component just renders them with the
-// handlers it's given. The "X people" count is derived from included
-// travellers — it's no longer an independently editable value.
+// handlers it's given. The traveller count can be edited via clicking.
 export default function TripHeader({
   subtitle,
   depart,
@@ -26,7 +25,66 @@ export default function TripHeader({
   onTravellersChange,
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [editingCount, setEditingCount] = useState(false);
+  const [countInput, setCountInput] = useState("");
+  const countInputRef = useRef(null);
+
   const travellerCount = travellers.filter((t) => t.included).length;
+  const totalTravellers = travellers.length;
+
+  const handleCountEdit = () => {
+    setEditingCount(true);
+    setCountInput(String(travellerCount));
+  };
+
+  const handleCountChange = () => {
+    const newCount = parseInt(countInput, 10);
+    if (isNaN(newCount) || newCount < 1) return;
+    if (newCount === travellerCount) {
+      setEditingCount(false);
+      return;
+    }
+
+    const updated = [...travellers];
+
+    if (newCount > travellerCount) {
+      // Need to add more included travellers
+      const difference = newCount - travellerCount;
+      let added = 0;
+
+      // First, re-include excluded travellers
+      for (let i = 0; i < updated.length && added < difference; i++) {
+        if (!updated[i].included) {
+          updated[i].included = true;
+          added++;
+        }
+      }
+
+      // If still need more, create new travellers
+      for (let i = added; i < difference; i++) {
+        updated.push({
+          id: `traveller-${Date.now()}-${i}`,
+          name: "",
+          included: true,
+        });
+      }
+    } else {
+      // Need to exclude travellers
+      const difference = travellerCount - newCount;
+      let removed = 0;
+
+      // Exclude travellers starting from the end
+      for (let i = updated.length - 1; i >= 0 && removed < difference; i--) {
+        if (updated[i].included) {
+          updated[i].included = false;
+          removed++;
+        }
+      }
+    }
+
+    onTravellersChange(updated);
+    setEditingCount(false);
+  };
 
   return (
     <header className="border-b border-border">
@@ -90,7 +148,7 @@ export default function TripHeader({
           {subtitle}
         </p>
         <p className="mt-4 flex flex-wrap items-center justify-center gap-x-1 font-sans text-xs uppercase tracking-widest text-muted sm:text-sm">
-          <span className="relative inline-flex rounded-sm px-0.5 -mx-0.5 transition-colors hover:bg-stone/10 focus-within:bg-stone/10 focus-within:ring-1 focus-within:ring-forest/25">
+          <label className="relative inline-flex rounded-sm px-0.5 -mx-0.5 cursor-pointer transition-colors hover:bg-stone/10 focus-within:bg-stone/10 focus-within:ring-1 focus-within:ring-forest/25">
             {depart ? formatDMY(depart) : "DD/MM/YYYY"}
             <input
               type="date"
@@ -99,9 +157,9 @@ export default function TripHeader({
               aria-label="Departure date"
               className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
             />
-          </span>
+          </label>
           <span aria-hidden>&ndash;</span>
-          <span className="relative inline-flex rounded-sm px-0.5 -mx-0.5 transition-colors hover:bg-stone/10 focus-within:bg-stone/10 focus-within:ring-1 focus-within:ring-forest/25">
+          <label className="relative inline-flex rounded-sm px-0.5 -mx-0.5 cursor-pointer transition-colors hover:bg-stone/10 focus-within:bg-stone/10 focus-within:ring-1 focus-within:ring-forest/25">
             {returnDate ? formatDMY(returnDate) : "DD/MM/YYYY"}
             <input
               type="date"
@@ -110,11 +168,31 @@ export default function TripHeader({
               aria-label="Return date"
               className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
             />
-          </span>
+          </label>
           <span aria-hidden>&middot;</span>
-          <span>
-            {travellerCount} {travellerCount === 1 ? "person" : "people"}
-          </span>
+          {editingCount ? (
+            <input
+              ref={countInputRef}
+              autoFocus
+              type="number"
+              min="1"
+              value={countInput}
+              onChange={(e) => setCountInput(e.target.value)}
+              onBlur={handleCountChange}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleCountChange();
+                if (e.key === "Escape") setEditingCount(false);
+              }}
+              className="w-8 text-center bg-transparent border-b border-forest/30 focus:outline-none focus:border-forest"
+            />
+          ) : (
+            <button
+              onClick={handleCountEdit}
+              className="relative inline-flex rounded-sm px-0.5 -mx-0.5 cursor-pointer transition-colors hover:bg-stone/10 focus:bg-stone/10 focus:outline-none focus:ring-1 focus:ring-forest/25"
+            >
+              {travellerCount} {travellerCount === 1 ? "person" : "people"}
+            </button>
+          )}
         </p>
       </div>
     </header>
