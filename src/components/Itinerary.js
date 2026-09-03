@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import TransitConnector from "./TransitConnector";
+import Journey, { transitToJourney } from "./Journey";
 import StopPanel from "./StopPanel";
 import { daysBetween, formatDuration } from "@/lib/duration";
 
@@ -19,7 +19,15 @@ import { daysBetween, formatDuration } from "@/lib/duration";
 // any date must immediately recompute every affected duration.
 export default function Itinerary({ itinerary, tripReturnDate }) {
   const { currency } = itinerary;
-  const [stops, setStops] = useState(() => itinerary.days.map((d) => ({ ...d })));
+  // Each stop's legacy single `transit` is migrated once, up front, into a
+  // `journey` — an ordered list of transport legs and optional stopovers —
+  // so no existing transport mode, description or cost is lost.
+  const [stops, setStops] = useState(() =>
+    itinerary.days.map((d) => {
+      const { transit, ...rest } = d;
+      return { ...rest, journey: transitToJourney(transit) };
+    })
+  );
   const [draggingId, setDraggingId] = useState(null);
   const seq = useRef(0);
   const rowRefs = useRef(new Map());
@@ -104,7 +112,7 @@ export default function Itinerary({ itinerary, tripReturnDate }) {
     const id = `new-stop-${Date.now()}-${seq.current}`;
     setStops((prev) => [
       ...prev,
-      { id, loc: "", date: "", desc: "", tag: "", cost: 0, photo: null, transit: null, activities: [] },
+      { id, loc: "", date: "", desc: "", tag: "", cost: 0, photo: null, journey: [], activities: [] },
     ]);
   };
 
@@ -128,7 +136,7 @@ export default function Itinerary({ itinerary, tripReturnDate }) {
             const duration = formatDuration(daysBetween(stop.date, nextDate));
             return (
               <div key={stop.id} ref={setRow(stop.id)}>
-                <TransitConnector transit={stop.transit} currency={currency} isFirst={index === 0} />
+                <Journey initialJourney={stop.journey} currency={currency} isFirst={index === 0} />
                 <StopPanel
                   day={stop}
                   index={index}
