@@ -15,6 +15,9 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
+  const gridRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   const onHandleKeyDown = (e) => {
     if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
@@ -41,6 +44,18 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [showMenu]);
+
+  useEffect(() => {
+    const updateScrollState = () => {
+      if (gridRef.current) {
+        setCanScrollLeft(gridRef.current.canScrollLeft);
+        setCanScrollRight(gridRef.current.canScrollRight);
+      }
+    };
+    updateScrollState();
+    const interval = setInterval(updateScrollState, 100);
+    return () => clearInterval(interval);
+  }, [day.activities.length]);
 
   return (
     <div className="mx-auto w-full max-w-editorial px-4 sm:px-6">
@@ -140,13 +155,36 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
 
             {/* Activities section */}
             <div className="space-y-3 border-t border-border pt-6">
-              <div className="flex items-center gap-2">
-                <span className="text-rust">★</span>
-                <h3 className="font-sans text-sm font-semibold uppercase tracking-widest text-forest">
-                  Things to do in {day.loc || "this stop"}
-                </h3>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-rust flex-none">★</span>
+                  <h3 className="font-sans text-sm font-semibold uppercase tracking-widest text-forest">
+                    Things to do in {day.loc || "this stop"}
+                  </h3>
+                </div>
+                <div className="flex items-center gap-1.5 flex-none">
+                  <button
+                    type="button"
+                    onClick={() => gridRef.current?.scrollByPage(-1)}
+                    aria-label="Scroll activities left"
+                    disabled={!canScrollLeft}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-stone/30 text-stone/60 transition-colors hover:text-forest hover:border-forest/50 disabled:opacity-40 disabled:cursor-default"
+                  >
+                    <span className="text-sm">‹</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => gridRef.current?.scrollByPage(1)}
+                    aria-label="Scroll activities right"
+                    disabled={!canScrollRight}
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-stone/30 text-stone/60 transition-colors hover:text-forest hover:border-forest/50 disabled:opacity-40 disabled:cursor-default"
+                  >
+                    <span className="text-sm">›</span>
+                  </button>
+                </div>
               </div>
               <ActivityGrid
+                ref={gridRef}
                 activities={day.activities}
                 onChange={onActivitiesChange}
                 currency={currency}

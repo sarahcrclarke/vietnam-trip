@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import ActivityCard from "./ActivityCard";
 import { isUnanimous } from "@/lib/voting";
-import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
 
 // Controlled by Itinerary's stops state (not local) because the trip cost
 // summary needs every activity's live cost across every destination to
@@ -14,7 +13,11 @@ import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
 // Layout: a native CSS-grid carousel (grid-auto-flow: column) rather than a
 // tall grid or a carousel library — two rows on desktop, one larger row on
 // mobile, continuing sideways into a horizontally-scrollable track.
-export default function ActivityGrid({ activities, onChange, currency, loc, travellers }) {
+
+const ActivityGrid = forwardRef(function ActivityGrid(
+  { activities, onChange, currency, loc, travellers, renderControls },
+  ref
+) {
   const seq = useRef(0);
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -83,6 +86,12 @@ export default function ActivityGrid({ activities, onChange, currency, loc, trav
     el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: "smooth" });
   };
 
+  useImperativeHandle(ref, () => ({
+    scrollByPage,
+    canScrollLeft,
+    canScrollRight,
+  }));
+
   return (
     <div className="relative" data-loc={loc}>
       <div
@@ -114,26 +123,8 @@ export default function ActivityGrid({ activities, onChange, currency, loc, trav
         </button>
       </div>
 
-      {canScrollLeft && (
-        <button
-          type="button"
-          onClick={() => scrollByPage(-1)}
-          aria-label="Scroll activities left"
-          className="absolute -left-3 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background/90 p-1.5 text-stone/60 shadow-sm backdrop-blur-sm transition-colors hover:text-forest sm:flex"
-        >
-          <ChevronLeftIcon />
-        </button>
-      )}
-      {canScrollRight && (
-        <button
-          type="button"
-          onClick={() => scrollByPage(1)}
-          aria-label="Scroll activities right"
-          className="absolute -right-3 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background/90 p-1.5 text-stone/60 shadow-sm backdrop-blur-sm transition-colors hover:text-forest sm:flex"
-        >
-          <ChevronRightIcon />
-        </button>
-      )}
     </div>
   );
-}
+});
+
+export default ActivityGrid;
