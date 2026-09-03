@@ -28,16 +28,15 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
     <div className="mx-auto w-full max-w-editorial px-4 sm:px-6">
       <div className="flex gap-6">
         {/* Timeline column — the number sits directly on the fine journey
-            line via a short connecting tick, rather than floating beside it. */}
+            line via a short connecting tick, rather than floating beside it.
+            The line itself spans this column's full (stretched) height so it
+            stays unbroken from the transit row above into the card below. */}
         <div className="relative w-12 flex-none sm:w-16">
-          {index > 0 && (
-            <div className="absolute -top-8 left-1/2 h-8 -translate-x-1/2 border-l border-stone/25" />
-          )}
+          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 border-l border-stone/25" />
           <div className="relative z-10 mx-auto flex flex-col items-center">
             <span className="text-sm font-bold text-forest sm:text-base">{number}</span>
             <span aria-hidden className="mt-2 h-5 w-px bg-stone/25 sm:h-6" />
           </div>
-          <div className="absolute -bottom-8 left-1/2 h-8 -translate-x-1/2 border-l border-stone/25" />
         </div>
 
         {/* Card content */}

@@ -56,13 +56,15 @@ export default function TransitConnector({ transit, currency, isFirst }) {
   return (
     <div className="mx-auto w-full max-w-editorial px-4 py-4 sm:px-6 sm:py-5">
       <div className="flex gap-6">
-        {/* Timeline column with icon */}
+        {/* Timeline column with icon — the line extends past this column's own
+            top/bottom by exactly this wrapper's vertical padding (py-4/py-5),
+            so it reaches the true wrapper edges and stays unbroken into the
+            destination cards immediately above and below. */}
         <div className="relative w-12 flex-none sm:w-16">
-          <div className="absolute -top-6 left-1/2 h-6 -translate-x-1/2 border-l border-stone/25" />
+          <div className="absolute -top-4 -bottom-4 left-1/2 -translate-x-1/2 border-l border-stone/25 sm:-top-5 sm:-bottom-5" />
           <div className="relative z-10 mx-auto flex h-11 w-11 items-center justify-center text-stone/70 sm:h-14 sm:w-14">
             {present && <TransportIcon mode={mode} />}
           </div>
-          <div className="absolute -bottom-6 left-1/2 h-6 -translate-x-1/2 border-l border-stone/25" />
         </div>
 
         {/* Transit details */}
