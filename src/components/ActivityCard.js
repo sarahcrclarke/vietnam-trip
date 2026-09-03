@@ -51,7 +51,7 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
   const label = nameVal;
 
   return (
-    <div className="group flex flex-col">
+    <div className="group flex snap-start flex-col">
       <div className="relative overflow-hidden rounded-[5px]">
         {imgSrc ? (
           <img
@@ -159,7 +159,7 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
       </div>
 
       {unanimous && (
-        <p className="mt-2.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-rust">
+        <p className="mt-2 flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-rust">
           <span aria-hidden>★</span>
           Everyone&rsquo;s pick
         </p>
@@ -171,12 +171,12 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
         onChange={(e) => setNameVal(e.target.value)}
         placeholder="Activity name"
         aria-label="Activity name"
-        className={`w-full truncate rounded-sm bg-transparent font-sans text-sm font-semibold text-foreground placeholder:font-normal placeholder:text-stone/40 hover:bg-stone/[0.06] focus:bg-stone/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/30 ${
-          unanimous ? "mt-1" : "mt-2.5"
+        className={`w-full truncate rounded-sm bg-transparent font-sans text-xs font-semibold text-foreground placeholder:font-normal placeholder:text-stone/40 hover:bg-stone/[0.06] focus:bg-stone/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/30 sm:text-sm ${
+          unanimous ? "mt-1" : "mt-2"
         }`}
       />
 
-      <ActivityFields link={link} cost={cost} currency={currency} />
+      <ActivityFields link={link} cost={cost} travelTime={activity.travelTime} currency={currency} />
 
       <ActivityVotes voters={voters} votes={votes} onToggle={onToggleVote} />
     </div>

@@ -39,9 +39,12 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
           </div>
         </div>
 
-        {/* Card content */}
+        {/* Card content — min-w-0 lets this flex item shrink below its
+            content's intrinsic width, so the activity carousel's own
+            overflow-x scrolls internally instead of the whole card
+            stretching wider than its column to fit every activity. */}
         <div
-          className={`flex-1 transition-[opacity,box-shadow] ${
+          className={`min-w-0 flex-1 transition-[opacity,box-shadow] ${
             dragging ? "opacity-60" : ""
           }`}
         >

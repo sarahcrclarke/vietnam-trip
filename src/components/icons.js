@@ -59,6 +59,76 @@ export function CalendarIcon() {
   );
 }
 
+export function ClockIcon({ className = "h-3 w-3" }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 16 16"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="8" cy="8" r="6.25" />
+      <path d="M8 4.5V8l2.5 1.5" />
+    </svg>
+  );
+}
+
+export function ExternalLinkIcon({ className = "h-3 w-3" }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 16 16"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-3" />
+      <path d="M9.5 2H14v4.5M14 2 7.5 8.5" />
+    </svg>
+  );
+}
+
+export function ChevronLeftIcon({ className = "h-4 w-4" }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 16 16"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M10 3 5 8l5 5" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon({ className = "h-4 w-4" }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 16 16"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 3l5 5-5 5" />
+    </svg>
+  );
+}
+
 export function TransportIcon({ mode = "train" }) {
   const className = "h-6 w-6 sm:h-7 sm:w-7";
 
