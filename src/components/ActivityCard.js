@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CameraIcon, CloseIcon } from "./icons";
 import ActivityVotes from "./ActivityVotes";
 import ActivityFields from "./ActivityFields";
@@ -11,23 +11,86 @@ export default function ActivityCard({ activity, currency, isNew = false, onRemo
   // New activities have an editable name; existing JSON names stay static.
   const [nameVal, setNameVal] = useState(name ?? "");
 
+  // Image is client-side state only. Existing images start from the JSON
+  // base64 (a data: URL, never revoked); device uploads use object URLs which
+  // we revoke on replace/remove/unmount to avoid leaks. No persistence.
+  const [imgSrc, setImgSrc] = useState(image || null);
+  const objectUrlRef = useRef(null);
+  const fileRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    },
+    []
+  );
+
+  const openPicker = () => fileRef.current?.click();
+
+  const onFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // let the same file be picked again later
+    if (!file || !file.type.startsWith("image/")) return; // images only
+    const url = URL.createObjectURL(file);
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    objectUrlRef.current = url;
+    setImgSrc(url);
+  };
+
+  const removePhoto = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    setImgSrc(null);
+  };
+
   const label = isNew ? nameVal : name;
 
   return (
     <div className="flex flex-col">
       <div className="relative">
-        {image ? (
-          <img
-            src={image}
-            alt={name}
-            className="aspect-[4/3] w-full object-cover"
-          />
+        {imgSrc ? (
+          <>
+            <img
+              src={imgSrc}
+              alt={label || "Activity image"}
+              className="aspect-[4/3] w-full object-cover"
+            />
+            {/* Subtle photo controls — kept small so they don't obscure the photo. */}
+            <div className="absolute bottom-1.5 left-1.5 flex gap-1 font-mono text-[9px] uppercase tracking-wider">
+              <button
+                type="button"
+                onClick={openPicker}
+                className="border border-forest/40 bg-parchment/90 px-1.5 py-0.5 text-forest transition-colors hover:border-forest"
+              >
+                Change photo
+              </button>
+              <button
+                type="button"
+                onClick={removePhoto}
+                className="border border-rust/50 bg-parchment/90 px-1.5 py-0.5 text-rust transition-colors hover:border-rust"
+              >
+                Remove photo
+              </button>
+            </div>
+          </>
         ) : (
-          <div className="flex aspect-[4/3] w-full items-center justify-center bg-ink/5 text-ink/30">
+          // Existing camera placeholder, now clickable to add a photo.
+          <button
+            type="button"
+            onClick={openPicker}
+            aria-label="Add photo"
+            className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-1 bg-ink/5 text-ink/30 transition-colors hover:bg-ink/10 hover:text-forest/60"
+          >
             <CameraIcon />
-          </div>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-forest/60">
+              + Add photo
+            </span>
+          </button>
         )}
 
+        {/* Activity delete — unchanged behaviour, distinct from photo controls. */}
         <button
           type="button"
           onClick={() => setConfirming(true)}
@@ -60,6 +123,16 @@ export default function ActivityCard({ activity, currency, isNew = false, onRemo
             </div>
           </div>
         )}
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          onChange={onFile}
+          className="hidden"
+          aria-hidden="true"
+          tabIndex={-1}
+        />
       </div>
 
       {isNew ? (
