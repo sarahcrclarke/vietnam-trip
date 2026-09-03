@@ -4,7 +4,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - claude/new-itinerary-project-setup-aumina
+      - claude/katie-loxton-analytics-pwa-yqrqy7
   workflow_dispatch:
 
 # Permissions the deploy-pages action needs.
