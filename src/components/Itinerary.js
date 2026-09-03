@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import TransitConnector from "./TransitConnector";
 import StopPanel from "./StopPanel";
+import { daysBetween, formatDuration } from "@/lib/duration";
 
 // List-level client state for the itinerary's stops. Initialised from JSON
 // (each stop keeps its stable JSON `id`; new stops get a temporary id). No
@@ -11,7 +12,12 @@ import StopPanel from "./StopPanel";
 // Reordering (drag or keyboard) only changes the ORDER of the stops array;
 // stable ids stay the React keys, so stop components are never remounted and
 // all temporary state inside them is preserved.
-export default function Itinerary({ itinerary }) {
+//
+// Each stop's `date` is controlled here (not owned locally by the date input)
+// because a destination's duration is derived from its own date through the
+// NEXT stop's date (or the trip's return date for the final stop) — editing
+// any date must immediately recompute every affected duration.
+export default function Itinerary({ itinerary, tripReturnDate }) {
   const { currency } = itinerary;
   const [stops, setStops] = useState(() => itinerary.days.map((d) => ({ ...d })));
   const [draggingId, setDraggingId] = useState(null);
@@ -104,6 +110,11 @@ export default function Itinerary({ itinerary }) {
 
   const removeStop = (id) => setStops((prev) => prev.filter((s) => s.id !== id));
 
+  const updateDate = useCallback(
+    (id, date) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, date } : s))),
+    []
+  );
+
   return (
     <div className="flex flex-col">
       {stops.length === 0 ? (
@@ -112,20 +123,26 @@ export default function Itinerary({ itinerary }) {
         </div>
       ) : (
         <div className="space-y-0">
-          {stops.map((stop, index) => (
-            <div key={stop.id} ref={setRow(stop.id)}>
-              <TransitConnector transit={stop.transit} currency={currency} isFirst={index === 0} />
-              <StopPanel
-                day={stop}
-                index={index}
-                currency={currency}
-                onRemove={removeStop}
-                onDragStart={startDrag}
-                onMoveStop={moveStop}
-                dragging={draggingId === stop.id}
-              />
-            </div>
-          ))}
+          {stops.map((stop, index) => {
+            const nextDate = index + 1 < stops.length ? stops[index + 1].date : tripReturnDate;
+            const duration = formatDuration(daysBetween(stop.date, nextDate));
+            return (
+              <div key={stop.id} ref={setRow(stop.id)}>
+                <TransitConnector transit={stop.transit} currency={currency} isFirst={index === 0} />
+                <StopPanel
+                  day={stop}
+                  index={index}
+                  currency={currency}
+                  onRemove={removeStop}
+                  onDragStart={startDrag}
+                  onMoveStop={moveStop}
+                  dragging={draggingId === stop.id}
+                  onDateChange={updateDate}
+                  duration={duration}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 

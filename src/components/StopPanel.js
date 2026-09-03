@@ -9,7 +9,7 @@ import DestinationTag from "./DestinationTag";
 import DestinationCost from "./DestinationCost";
 import DestinationPhoto from "./DestinationPhoto";
 
-export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging }) {
+export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onDateChange, duration }) {
   const number = String(index + 1).padStart(2, "0");
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -98,11 +98,13 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
 
             <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                <DestinationDate value={day.date} />
-                <span aria-hidden className="text-stone/40">
-                  &middot;
-                </span>
-                <DestinationTag value={day.tag} />
+                <DestinationDate value={day.date} onChange={(date) => onDateChange(day.id, date)} />
+                {duration && (
+                  <span aria-hidden className="text-stone/40">
+                    &middot;
+                  </span>
+                )}
+                <DestinationTag value={duration} />
               </div>
               <DestinationCost value={day.cost} currency={currency} />
             </div>
