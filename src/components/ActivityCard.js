@@ -5,11 +5,13 @@ import { CameraIcon } from "./icons";
 import ActivityVotes from "./ActivityVotes";
 import ActivityFields from "./ActivityFields";
 
-export default function ActivityCard({ activity, currency, isNew = false, onRemove }) {
+export default function ActivityCard({ activity, currency, onRemove }) {
   const { name, link, cost, image, votes } = activity;
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  // New activities have an editable name; existing JSON names stay static.
+  // Name is always editable — existing JSON names and newly-added activities
+  // both edit the same client-side state. No persistence; a refresh restores
+  // the JSON value.
   const [nameVal, setNameVal] = useState(name ?? "");
 
   // Image is client-side state only. Existing images start from the JSON
@@ -46,7 +48,7 @@ export default function ActivityCard({ activity, currency, isNew = false, onRemo
     setImgSrc(null);
   };
 
-  const label = isNew ? nameVal : name;
+  const label = nameVal;
 
   return (
     <div className="group flex flex-col">
@@ -156,18 +158,14 @@ export default function ActivityCard({ activity, currency, isNew = false, onRemo
         />
       </div>
 
-      {isNew ? (
-        <input
-          type="text"
-          value={nameVal}
-          onChange={(e) => setNameVal(e.target.value)}
-          placeholder="Activity name"
-          aria-label="Activity name"
-          className="mt-2.5 w-full bg-transparent font-sans text-sm font-semibold text-foreground placeholder:font-normal placeholder:text-stone/40 focus:outline-none"
-        />
-      ) : (
-        <p className="mt-2.5 truncate font-sans text-sm font-semibold text-foreground">{name}</p>
-      )}
+      <input
+        type="text"
+        value={nameVal}
+        onChange={(e) => setNameVal(e.target.value)}
+        placeholder="Activity name"
+        aria-label="Activity name"
+        className="mt-2.5 w-full truncate rounded-sm bg-transparent font-sans text-sm font-semibold text-foreground placeholder:font-normal placeholder:text-stone/40 hover:bg-stone/[0.06] focus:bg-stone/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/30"
+      />
 
       <ActivityFields link={link} cost={cost} currency={currency} />
 

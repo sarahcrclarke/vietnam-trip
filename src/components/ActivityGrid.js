@@ -23,7 +23,6 @@ export default function ActivityGrid({ activities, currency, loc }) {
         cost: 0,
         image: null,
         votes: { Sarah: null, Dom: null, Steph: null },
-        isNew: true,
       },
     ]);
   };
@@ -41,7 +40,6 @@ export default function ActivityGrid({ activities, currency, loc }) {
           key={activity.id}
           activity={activity}
           currency={currency}
-          isNew={!!activity.isNew}
           onRemove={removeActivity}
         />
       ))}

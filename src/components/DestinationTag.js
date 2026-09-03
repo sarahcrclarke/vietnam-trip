@@ -8,7 +8,7 @@ import { useState } from "react";
 export default function DestinationTag({ value }) {
   const [tag, setTag] = useState(value ?? "");
   return (
-    <span className="inline-grid rounded-[4px] bg-sage/25 px-3 py-1.5 font-sans text-xs font-semibold uppercase tracking-wide text-forest">
+    <span className="inline-grid rounded-[4px] bg-sage/25 px-3 py-1.5 font-sans text-xs font-semibold uppercase tracking-wide text-forest transition-colors hover:bg-sage/40 focus-within:bg-sage/40 focus-within:ring-1 focus-within:ring-forest/30">
       <span className="invisible col-start-1 row-start-1 whitespace-pre">
         {tag || "Duration"}
       </span>
