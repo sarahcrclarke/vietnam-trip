@@ -9,7 +9,7 @@ import DestinationTag from "./DestinationTag";
 import DestinationCost from "./DestinationCost";
 import DestinationPhoto from "./DestinationPhoto";
 
-export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onDateChange, duration }) {
+export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onDateChange, duration, travellers }) {
   const number = String(index + 1).padStart(2, "0");
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -124,6 +124,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
                 activities={day.activities}
                 currency={currency}
                 loc={day.loc}
+                travellers={travellers}
               />
             </div>
           </div>

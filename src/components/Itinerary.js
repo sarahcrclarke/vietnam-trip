@@ -17,7 +17,7 @@ import { daysBetween, formatDuration } from "@/lib/duration";
 // because a destination's duration is derived from its own date through the
 // NEXT stop's date (or the trip's return date for the final stop) — editing
 // any date must immediately recompute every affected duration.
-export default function Itinerary({ itinerary, tripReturnDate }) {
+export default function Itinerary({ itinerary, tripReturnDate, travellers }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -147,6 +147,7 @@ export default function Itinerary({ itinerary, tripReturnDate }) {
                   dragging={draggingId === stop.id}
                   onDateChange={updateDate}
                   duration={duration}
+                  travellers={travellers}
                 />
               </div>
             );

@@ -5,7 +5,7 @@ import { CameraIcon } from "./icons";
 import ActivityVotes from "./ActivityVotes";
 import ActivityFields from "./ActivityFields";
 
-export default function ActivityCard({ activity, currency, onRemove }) {
+export default function ActivityCard({ activity, currency, voters, unanimous, onToggleVote, onRemove }) {
   const { name, link, cost, image, votes } = activity;
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -158,18 +158,27 @@ export default function ActivityCard({ activity, currency, onRemove }) {
         />
       </div>
 
+      {unanimous && (
+        <p className="mt-2.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-rust">
+          <span aria-hidden>★</span>
+          Everyone&rsquo;s pick
+        </p>
+      )}
+
       <input
         type="text"
         value={nameVal}
         onChange={(e) => setNameVal(e.target.value)}
         placeholder="Activity name"
         aria-label="Activity name"
-        className="mt-2.5 w-full truncate rounded-sm bg-transparent font-sans text-sm font-semibold text-foreground placeholder:font-normal placeholder:text-stone/40 hover:bg-stone/[0.06] focus:bg-stone/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/30"
+        className={`w-full truncate rounded-sm bg-transparent font-sans text-sm font-semibold text-foreground placeholder:font-normal placeholder:text-stone/40 hover:bg-stone/[0.06] focus:bg-stone/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/30 ${
+          unanimous ? "mt-1" : "mt-2.5"
+        }`}
       />
 
       <ActivityFields link={link} cost={cost} currency={currency} />
 
-      <ActivityVotes votes={votes} />
+      <ActivityVotes voters={voters} votes={votes} onToggle={onToggleVote} />
     </div>
   );
 }

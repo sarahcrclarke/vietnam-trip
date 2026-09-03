@@ -8,8 +8,9 @@ import { INITIAL_TRAVELLERS } from "@/lib/travellers";
 // Owns the trip-level dates and the traveller list. The return date is
 // threaded down into Itinerary because the final destination's derived
 // duration is calculated against it. Travellers live here (not inside the
-// header) because activity voting, transport traveller assignment and
-// cost-per-person will all need the same list in later passes.
+// header) and are passed down into Itinerary too, so activity voting reads
+// the same shared list rather than an independent copy — transport
+// traveller assignment and cost-per-person will do the same in later passes.
 // Client-side only; no persistence, so a refresh restores the JSON/seed
 // values.
 export default function TripPlanner({ itinerary }) {
@@ -28,7 +29,7 @@ export default function TripPlanner({ itinerary }) {
         travellers={travellers}
         onTravellersChange={setTravellers}
       />
-      <Itinerary itinerary={itinerary} tripReturnDate={returnDate} />
+      <Itinerary itinerary={itinerary} tripReturnDate={returnDate} travellers={travellers} />
     </>
   );
 }
