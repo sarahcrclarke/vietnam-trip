@@ -58,3 +58,53 @@ export function CalendarIcon() {
     </svg>
   );
 }
+
+export function TransportIcon({ mode = "train" }) {
+  const className = "h-6 w-6 sm:h-7 sm:w-7";
+
+  if (mode.toLowerCase().includes("train")) {
+    return (
+      <svg aria-hidden viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.2">
+        <path d="M4 8v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M4 8h16M6 16h12M7 2h10v4H7z" />
+        <circle cx="8" cy="18" r="1" />
+        <circle cx="16" cy="18" r="1" />
+      </svg>
+    );
+  } else if (mode.toLowerCase().includes("flight")) {
+    return (
+      <svg aria-hidden viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.2">
+        <path d="M3 9l9-7 9 7M12 2v15M2 12h4l6 8 6-8h4" />
+      </svg>
+    );
+  } else if (mode.toLowerCase().includes("bus")) {
+    return (
+      <svg aria-hidden viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.2">
+        <path d="M3 8h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z" />
+        <path d="M7 8V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v3M6 16h1M17 16h1" />
+        <circle cx="7.5" cy="18" r="1.5" />
+        <circle cx="16.5" cy="18" r="1.5" />
+      </svg>
+    );
+  } else if (mode.toLowerCase().includes("car")) {
+    return (
+      <svg aria-hidden viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.2">
+        <path d="M7 2h10a1 1 0 0 1 1 1v4h2l2 4v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-8l2-4h2V3a1 1 0 0 1 1-1z" />
+        <circle cx="7" cy="17" r="1.5" />
+        <circle cx="17" cy="17" r="1.5" />
+      </svg>
+    );
+  } else if (mode.toLowerCase().includes("ferry") || mode.toLowerCase().includes("boat")) {
+    return (
+      <svg aria-hidden viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.2">
+        <path d="M2 18h20v2H2z" />
+        <path d="M12 2v10M8 6l4-4 4 4M12 5v7l-4-2v8M12 12l4-2v8" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.2">
+      <path d="M5 12h14M12 5v14" />
+    </svg>
+  );
+}

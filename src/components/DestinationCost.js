@@ -17,7 +17,7 @@ export default function DestinationCost({ value, currency }) {
   };
 
   return (
-    <span className="inline-flex items-baseline border-b border-rust/50 pb-0.5 font-mono text-lg font-bold text-rust sm:text-xl">
+    <span className="inline-flex items-baseline font-display text-2xl font-bold text-rust sm:text-3xl">
       <span>{currency}</span>
       <span className="inline-grid">
         <span className="invisible col-start-1 row-start-1 whitespace-pre">

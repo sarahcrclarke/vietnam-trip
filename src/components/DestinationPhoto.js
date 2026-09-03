@@ -8,6 +8,7 @@ import { CameraIcon } from "./icons";
 // replace/remove/unmount. Existing JSON photos are data: URLs (never revoked).
 export default function DestinationPhoto({ photo, loc }) {
   const [imgSrc, setImgSrc] = useState(photo || null);
+  const [showMenu, setShowMenu] = useState(false);
   const objectUrlRef = useRef(null);
   const fileRef = useRef(null);
 
@@ -39,29 +40,49 @@ export default function DestinationPhoto({ photo, loc }) {
   };
 
   return (
-    <div className="relative">
+    <div className="group relative overflow-hidden rounded-[5px]">
       {imgSrc ? (
         <>
           <img
             src={imgSrc}
             alt={loc}
-            className="h-56 w-full object-cover sm:h-72"
+            className="h-72 w-full object-cover sm:h-96"
           />
-          <div className="absolute bottom-2 left-2 flex gap-1 font-mono text-[9px] uppercase tracking-wider sm:text-[10px]">
-            <button
-              type="button"
-              onClick={openPicker}
-              className="border border-forest/40 bg-parchment/90 px-1.5 py-0.5 text-forest transition-colors hover:border-forest"
-            >
-              Change photo
-            </button>
-            <button
-              type="button"
-              onClick={removePhoto}
-              className="border border-rust/50 bg-parchment/90 px-1.5 py-0.5 text-rust transition-colors hover:border-rust"
-            >
-              Remove photo
-            </button>
+          <div className="absolute right-3 top-3">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowMenu((v) => !v)}
+                aria-label="Photo options"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-background/85 text-foreground/70 backdrop-blur-sm transition-colors hover:text-forest"
+              >
+                <span className="text-sm tracking-wider">•••</span>
+              </button>
+              {showMenu && (
+                <div className="absolute right-0 top-full mt-1 min-w-[9rem] space-y-1 rounded-[4px] border border-border bg-background px-2 py-1.5 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      openPicker();
+                    }}
+                    className="block w-full text-left text-sm text-stone/70 transition-colors hover:text-forest"
+                  >
+                    Change photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      removePhoto();
+                    }}
+                    className="block w-full text-left text-sm text-rust transition-colors hover:text-rust/80"
+                  >
+                    Remove photo
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </>
       ) : (
@@ -69,11 +90,11 @@ export default function DestinationPhoto({ photo, loc }) {
           type="button"
           onClick={openPicker}
           aria-label="Add photo"
-          className="flex h-56 w-full flex-col items-center justify-center gap-1 bg-ink/5 text-ink/30 transition-colors hover:bg-ink/10 hover:text-forest/60 sm:h-72"
+          className="flex h-72 w-full flex-col items-center justify-center gap-2 bg-stone/[0.06] text-stone/40 transition-colors hover:bg-stone/10 hover:text-forest/60 sm:h-96"
         >
           <CameraIcon />
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-forest/60 sm:text-xs">
-            + Add photo
+          <span className="font-sans text-xs font-medium uppercase tracking-widest text-stone/50">
+            Add photo
           </span>
         </button>
       )}

@@ -1,11 +1,18 @@
 @import "tailwindcss";
 
+/* Freight and Quasimoda are loaded via next/font/local in layout.js, which
+   self-hosts them and exposes --font-freight / --font-quasimoda — this keeps
+   font URLs correctly prefixed with the site's basePath. */
+
 :root {
-  --background: #f2ecd8;
-  --foreground: #2a2822;
+  --background: #faf8f5;
+  --foreground: #3a3530;
   --forest: #1f3d31;
-  --rust: #b8402c;
-  --sage: #cbd9c3;
+  --stone: #9a9288;
+  --muted: #6b6456;
+  --sage: #a8b5a0;
+  --rust: #c4512f;
+  --border: #e8e4df;
 }
 
 @theme inline {
@@ -14,15 +21,23 @@
   --color-parchment: var(--background);
   --color-ink: var(--foreground);
   --color-forest: var(--forest);
-  --color-rust: var(--rust);
+  --color-stone: var(--stone);
+  --color-muted: var(--muted);
   --color-sage: var(--sage);
-  --font-sans: var(--font-geist-sans);
-  --font-display: var(--font-display);
+  --color-rust: var(--rust);
+  --color-border: var(--border);
+  --font-sans: var(--font-quasimoda);
+  --font-display: var(--font-freight);
   --font-mono: var(--font-plex-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Custom wider container */
+.max-w-editorial {
+  max-width: 1200px;
 }

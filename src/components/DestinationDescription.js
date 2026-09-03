@@ -23,7 +23,7 @@ export default function DestinationDescription({ value }) {
       rows={1}
       placeholder="Description"
       aria-label="Destination description"
-      className="block w-full resize-none overflow-hidden bg-transparent px-4 pb-5 pt-3 text-sm leading-relaxed text-ink/80 placeholder:text-ink/40 focus:outline-none sm:px-6 sm:text-base"
+      className="block w-full resize-none overflow-hidden bg-transparent text-base leading-relaxed text-muted placeholder:text-stone/40 focus:outline-none"
     />
   );
 }

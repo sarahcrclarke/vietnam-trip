@@ -13,7 +13,7 @@ export default function DestinationName({ value }) {
       onChange={(e) => setName(e.target.value)}
       aria-label="Destination name"
       placeholder="Destination"
-      className="min-w-0 flex-1 bg-transparent font-display text-3xl font-bold text-forest placeholder:text-forest/40 focus:outline-none sm:text-4xl"
+      className="min-w-0 w-full bg-transparent font-display text-3xl font-bold text-forest placeholder:text-forest/30 focus:outline-none sm:text-4xl"
     />
   );
 }

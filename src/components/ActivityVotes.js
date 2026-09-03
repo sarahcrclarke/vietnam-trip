@@ -11,9 +11,9 @@ const VOTE_ORDER = ["Sarah", "Dom", "Steph"];
 //   true  -> muted sage / dark-green (selected but restrained)
 //   false -> muted rust (negative but not aggressive)
 function voteStyle(value) {
-  if (value === true) return "border-forest/70 bg-sage text-forest";
-  if (value === false) return "border-rust/60 text-rust/80";
-  return "border-ink/40 text-ink/60";
+  if (value === true) return "border-forest/60 bg-sage/30 text-forest";
+  if (value === false) return "border-rust/45 bg-rust/[0.06] text-rust";
+  return "border-stone/40 text-stone/70";
 }
 
 // Cycle: null -> true -> false -> null
@@ -39,14 +39,14 @@ export default function ActivityVotes({ votes }) {
     setState((prev) => ({ ...prev, [voter]: nextVote(prev[voter]) }));
 
   return (
-    <div className="mt-1.5 flex gap-1.5">
+    <div className="mt-2 flex gap-1.5">
       {VOTE_ORDER.map((voter) => (
         <button
           key={voter}
           type="button"
           onClick={() => cycle(voter)}
           aria-label={`${VOTER_LABELS[voter]}: ${ariaState(state[voter])}`}
-          className={`rounded-full border px-2 py-0.5 font-mono text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-forest/40 ${voteStyle(
+          className={`rounded-full border px-2 py-0.5 font-sans text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-forest/40 ${voteStyle(
             state[voter]
           )}`}
         >

@@ -10,7 +10,7 @@ import { formatDMY } from "@/lib/date";
 export default function DestinationDate({ value }) {
   const [date, setDate] = useState(value ?? "");
   return (
-    <div className="relative flex items-center gap-1.5 font-mono text-sm text-ink/70">
+    <div className="relative inline-flex items-center gap-1.5 font-sans text-sm text-muted">
       <CalendarIcon />
       <span>{date ? formatDMY(date) : "DD/MM/YYYY"}</span>
       <input

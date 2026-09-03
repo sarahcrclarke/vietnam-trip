@@ -34,7 +34,7 @@ export default function ActivityGrid({ activities, currency, loc }) {
   return (
     <div
       data-loc={loc}
-      className="grid grid-cols-2 gap-x-3 gap-y-5 px-4 pb-6 sm:grid-cols-4 sm:px-6 sm:pb-8"
+      className="grid grid-cols-2 gap-x-5 gap-y-7 sm:grid-cols-4"
     >
       {list.map((activity) => (
         <ActivityCard
@@ -49,9 +49,9 @@ export default function ActivityGrid({ activities, currency, loc }) {
       <button
         type="button"
         onClick={addActivity}
-        className="flex min-h-[9rem] flex-col items-center justify-center gap-1 border border-dashed border-forest/50 bg-parchment font-mono text-xs font-semibold uppercase tracking-widest text-forest transition-colors hover:border-forest hover:bg-sage/40"
+        className="flex min-h-[7rem] flex-col items-center justify-center gap-1 rounded-[4px] border border-border/70 bg-transparent font-sans text-[11px] font-medium uppercase tracking-wide text-stone/45 transition-colors hover:border-forest/25 hover:bg-sage/10 hover:text-forest/70"
       >
-        <span aria-hidden className="text-lg leading-none">
+        <span aria-hidden className="text-base leading-none">
           +
         </span>
         Add activity
