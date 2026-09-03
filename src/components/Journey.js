@@ -30,6 +30,14 @@ function normalizeMode(raw) {
   return "other";
 }
 
+// Which included travellers a leg defaults to: everyone currently included.
+// Excluding someone from the trip later doesn't remove their id here — it's
+// just filtered out of display/counts — so re-including them restores their
+// assignment automatically.
+function includedIds(travellers) {
+  return travellers.filter((t) => t.included).map((t) => t.id);
+}
+
 function makeLeg(overrides = {}) {
   return {
     type: "leg",
@@ -38,9 +46,13 @@ function makeLeg(overrides = {}) {
     cost: "",
     depDate: "",
     depTime: "",
+    depLoc: "",
     arrDate: "",
     arrTime: "",
-    ref: "",
+    arrLoc: "",
+    bookingRef: "",
+    serviceNumber: "",
+    travellerIds: [],
     ...overrides,
   };
 }
@@ -52,8 +64,9 @@ function makeStopover(overrides = {}) {
 // Converts the legacy single-transit shape ({mode, dur, cost} | null) into
 // the initial journey — an ordered list of legs/stopovers — so no existing
 // transport mode, description or cost is lost. A journey with one leg and no
-// stopovers renders identically to the old single-transit connector.
-export function transitToJourney(transit) {
+// stopovers renders identically to the old single-transit connector. The
+// migrated leg defaults to every currently included traveller.
+export function transitToJourney(transit, travellers = []) {
   if (!transit) return [];
   return [
     makeLeg({
@@ -61,8 +74,27 @@ export function transitToJourney(transit) {
       mode: normalizeMode(transit.mode),
       dur: transit.dur ?? "",
       cost: transit.cost != null ? String(transit.cost) : "",
+      travellerIds: includedIds(travellers),
     }),
   ];
+}
+
+// Mode-sensitive label for the service/vehicle number field.
+function serviceNumberLabel(mode) {
+  if (mode === "flight") return "Flight number";
+  if (mode === "train") return "Train number";
+  if (mode === "bus") return "Service number";
+  if (mode === "ferry") return "Ferry/service number";
+  return "Reference / service number";
+}
+
+// A very restrained one-line summary shown when the accordion is collapsed
+// but details have been entered, e.g. "VN 123 · 14:20 → 16:05".
+function summarizeLegDetails(leg) {
+  const parts = [];
+  if (leg.serviceNumber) parts.push(leg.serviceNumber);
+  if (leg.depTime || leg.arrTime) parts.push(`${leg.depTime || "?"} → ${leg.arrTime || "?"}`);
+  return parts.length ? parts.join(" · ") : null;
 }
 
 function lineClass(isFirstRow, isLastRow) {
@@ -83,10 +115,22 @@ function Field({ label, className = "", children }) {
 const fieldInputClass =
   "w-full rounded-sm bg-transparent px-0.5 -mx-0.5 text-xs text-muted hover:bg-stone/10 focus:bg-stone/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/25";
 
-// Optional, collapsed-by-default section for a leg's scheduling specifics.
-// None of these fields are required. Traveller assignment is a separate pass.
-function LegDetails({ leg, onUpdate }) {
+// Optional, collapsed-by-default accordion for a leg's booking/scheduling
+// specifics and traveller assignment. None of the fields are required. When
+// collapsed, a restrained one-line summary shows if anything's been entered.
+function LegDetails({ leg, travellers, onUpdate }) {
   const [open, setOpen] = useState(false);
+  const summary = !open ? summarizeLegDetails(leg) : null;
+  const included = travellers.filter((t) => t.included);
+  const assigned = new Set(leg.travellerIds);
+
+  const toggleTraveller = (id) => {
+    const next = new Set(leg.travellerIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onUpdate({ travellerIds: [...next] });
+  };
+
   return (
     <div className="mt-1.5">
       <button
@@ -98,60 +142,126 @@ function LegDetails({ leg, onUpdate }) {
           &rsaquo;
         </span>
         Travel details
+        {summary && <span className="ml-1 normal-case tracking-normal text-stone/40">{summary}</span>}
       </button>
       {open && (
-        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border pt-2 sm:grid-cols-3">
-          <Field label="Departure date">
-            <input
-              type="date"
-              value={leg.depDate}
-              onChange={(e) => onUpdate({ depDate: e.target.value })}
-              className={fieldInputClass}
-            />
-          </Field>
-          <Field label="Departure time">
-            <input
-              type="time"
-              value={leg.depTime}
-              onChange={(e) => onUpdate({ depTime: e.target.value })}
-              className={fieldInputClass}
-            />
-          </Field>
-          <Field label="Arrival date">
-            <input
-              type="date"
-              value={leg.arrDate}
-              onChange={(e) => onUpdate({ arrDate: e.target.value })}
-              className={fieldInputClass}
-            />
-          </Field>
-          <Field label="Arrival time">
-            <input
-              type="time"
-              value={leg.arrTime}
-              onChange={(e) => onUpdate({ arrTime: e.target.value })}
-              className={fieldInputClass}
-            />
-          </Field>
-          <Field label="Reference" className="col-span-2 sm:col-span-1">
-            <input
-              type="text"
-              value={leg.ref}
-              onChange={(e) => onUpdate({ ref: e.target.value })}
-              placeholder="Flight/train no."
-              className={`${fieldInputClass} placeholder:text-stone/30`}
-            />
-          </Field>
+        <div className="mt-2 border-t border-border pt-2">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+            <Field label="Departure date">
+              <input
+                type="date"
+                value={leg.depDate}
+                onChange={(e) => onUpdate({ depDate: e.target.value })}
+                className={fieldInputClass}
+              />
+            </Field>
+            <Field label="Departure time">
+              <input
+                type="time"
+                value={leg.depTime}
+                onChange={(e) => onUpdate({ depTime: e.target.value })}
+                className={fieldInputClass}
+              />
+            </Field>
+            <Field label="Departure location">
+              <input
+                type="text"
+                value={leg.depLoc}
+                onChange={(e) => onUpdate({ depLoc: e.target.value })}
+                placeholder="Station/airport"
+                className={`${fieldInputClass} placeholder:text-stone/30`}
+              />
+            </Field>
+            <Field label="Arrival date">
+              <input
+                type="date"
+                value={leg.arrDate}
+                onChange={(e) => onUpdate({ arrDate: e.target.value })}
+                className={fieldInputClass}
+              />
+            </Field>
+            <Field label="Arrival time">
+              <input
+                type="time"
+                value={leg.arrTime}
+                onChange={(e) => onUpdate({ arrTime: e.target.value })}
+                className={fieldInputClass}
+              />
+            </Field>
+            <Field label="Arrival location">
+              <input
+                type="text"
+                value={leg.arrLoc}
+                onChange={(e) => onUpdate({ arrLoc: e.target.value })}
+                placeholder="Station/airport"
+                className={`${fieldInputClass} placeholder:text-stone/30`}
+              />
+            </Field>
+            <Field label="Booking reference">
+              <input
+                type="text"
+                value={leg.bookingRef}
+                onChange={(e) => onUpdate({ bookingRef: e.target.value })}
+                placeholder="Confirmation code"
+                className={`${fieldInputClass} placeholder:text-stone/30`}
+              />
+            </Field>
+            <Field label={serviceNumberLabel(leg.mode)}>
+              <input
+                type="text"
+                value={leg.serviceNumber}
+                onChange={(e) => onUpdate({ serviceNumber: e.target.value })}
+                placeholder="e.g. VN 123"
+                className={`${fieldInputClass} placeholder:text-stone/30`}
+              />
+            </Field>
+          </div>
+
+          {/* Traveller assignment — every INCLUDED traveller regardless of
+              voter status; multi-select pills matching the vote-pill style. */}
+          <div className="mt-3 border-t border-border pt-2">
+            <span className="block text-[10px] uppercase tracking-wide text-stone/40">Travellers</span>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {included.map((t) => {
+                const selected = assigned.has(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => toggleTraveller(t.id)}
+                    aria-pressed={selected}
+                    aria-label={`${t.initials || t.name || "Traveller"}: ${selected ? "assigned" : "not assigned"}`}
+                    title={t.name || undefined}
+                    className={`rounded-full border px-1.5 py-0.5 font-sans text-[10px] font-medium transition-colors ${
+                      selected
+                        ? "border-forest/60 bg-sage/30 text-forest"
+                        : "border-stone/40 text-stone/70 hover:border-stone/60"
+                    }`}
+                  >
+                    {t.initials || "?"}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function LegRow({ leg, currency, isFirstRow, isLastRow, onUpdate, onRemove }) {
+function LegRow({ leg, currency, travellers, isFirstRow, isLastRow, onUpdate, onRemove }) {
   const onCost = (e) => {
     if (COST_RE.test(e.target.value)) onUpdate({ cost: e.target.value });
   };
+
+  // Only currently-included travellers count — someone later excluded from
+  // the trip drops out of this count without their assignment being erased.
+  const includedCount = travellers.filter((t) => t.included).length;
+  const assignedCount = leg.travellerIds.filter((id) =>
+    travellers.some((t) => t.id === id && t.included)
+  ).length;
+  const showTravellerCount = includedCount > 0 && assignedCount < includedCount;
 
   return (
     <div className="flex gap-6">
@@ -227,17 +337,27 @@ function LegRow({ leg, currency, isFirstRow, isLastRow, onUpdate, onRemove }) {
             </span>
           </span>
 
+          {/* Compact indicator — only when assignment differs from the full
+              included party, so the main line stays clean the rest of the time. */}
+          {showTravellerCount && (
+            <span className="ml-auto text-[11px] text-stone/45">
+              {assignedCount} {assignedCount === 1 ? "traveller" : "travellers"}
+            </span>
+          )}
+
           <button
             type="button"
             onClick={onRemove}
             aria-label="Remove transport leg"
-            className="ml-auto inline-flex items-center text-stone/30 transition-colors hover:text-rust"
+            className={`inline-flex items-center text-stone/30 transition-colors hover:text-rust ${
+              showTravellerCount ? "" : "ml-auto"
+            }`}
           >
             <CloseIcon className="h-4 w-4" />
           </button>
         </div>
 
-        <LegDetails leg={leg} onUpdate={onUpdate} />
+        <LegDetails leg={leg} travellers={travellers} onUpdate={onUpdate} />
       </div>
     </div>
   );
@@ -342,7 +462,7 @@ function ControlsRow({ isFirstRow, isLastRow, onAddLeg, onAddStopover }) {
 // No persistence — a refresh restores the original single-leg journey.
 // Because this renders inside the stop's keyed wrapper, it moves with the
 // stop on reorder and is never remounted.
-export default function Journey({ journey, onChange, currency, isFirst }) {
+export default function Journey({ journey, onChange, currency, isFirst, travellers }) {
   const seq = useRef(0);
 
   const updateItem = (id, patch) =>
@@ -350,9 +470,14 @@ export default function Journey({ journey, onChange, currency, isFirst }) {
 
   const removeItem = (id) => onChange(journey.filter((it) => it.id !== id));
 
+  // A new leg defaults to every currently included traveller, same as a
+  // migrated one — users then deselect individuals as required.
   const addLeg = () => {
     seq.current += 1;
-    onChange([...journey, makeLeg({ id: `leg-${Date.now()}-${seq.current}` })]);
+    onChange([
+      ...journey,
+      makeLeg({ id: `leg-${Date.now()}-${seq.current}`, travellerIds: includedIds(travellers) }),
+    ]);
   };
 
   const addStopover = () => {
@@ -372,6 +497,7 @@ export default function Journey({ journey, onChange, currency, isFirst }) {
             key={item.id}
             leg={item}
             currency={currency}
+            travellers={travellers}
             isFirstRow={i === 0}
             isLastRow={false}
             onUpdate={(patch) => updateItem(item.id, patch)}

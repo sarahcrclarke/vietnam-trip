@@ -37,7 +37,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
       return {
         ...rest,
         cost: cost != null ? String(cost) : "",
-        journey: transitToJourney(transit),
+        journey: transitToJourney(transit, travellers),
         activities: activities.map((a) => ({
           ...a,
           cost: a.cost ? String(a.cost) : "",
@@ -174,6 +174,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onChange={(journey) => updateJourney(stop.id, journey)}
                   currency={currency}
                   isFirst={index === 0}
+                  travellers={travellers}
                 />
                 <StopPanel
                   day={stop}
