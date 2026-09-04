@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import ActivityGrid from "./ActivityGrid";
+import AccommodationSection from "./AccommodationSection";
 import DestinationName from "./DestinationName";
 import DestinationDate from "./DestinationDate";
 import DestinationDescription from "./DestinationDescription";
@@ -10,7 +11,7 @@ import DestinationCost from "./DestinationCost";
 import DestinationPhoto from "./DestinationPhoto";
 import { DragHandleIcon } from "./icons";
 
-export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onDateChange, onCostChange, onActivitiesChange, duration, travellers }) {
+export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onDateChange, onCostChange, onActivitiesChange, onAccommodationsChange, onAccommodationWishlistUrlChange, duration, travellers }) {
   const number = String(index + 1).padStart(2, "0");
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -18,6 +19,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
   const gridRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [activeTab, setActiveTab] = useState("activities");
 
   const onHandleKeyDown = (e) => {
     if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
@@ -153,44 +155,89 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
             {/* Description */}
             <DestinationDescription value={day.desc} />
 
-            {/* Activities section */}
-            <div className="space-y-3 border-t border-border pt-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-rust flex-none">★</span>
-                  <h3 className="font-sans text-sm font-semibold uppercase tracking-widest text-forest">
-                    Things to do in {day.loc || "this stop"}
-                  </h3>
-                </div>
-                <div className="flex items-center gap-1.5 flex-none">
-                  <button
-                    type="button"
-                    onClick={() => gridRef.current?.scrollByPage(-1)}
-                    aria-label="Scroll activities left"
-                    disabled={!canScrollLeft}
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-stone/30 text-stone/60 transition-colors hover:text-forest hover:border-forest/50 disabled:opacity-40 disabled:cursor-default"
-                  >
-                    <span className="text-sm">‹</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => gridRef.current?.scrollByPage(1)}
-                    aria-label="Scroll activities right"
-                    disabled={!canScrollRight}
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-stone/30 text-stone/60 transition-colors hover:text-forest hover:border-forest/50 disabled:opacity-40 disabled:cursor-default"
-                  >
-                    <span className="text-sm">›</span>
-                  </button>
-                </div>
+            {/* Tabs — Activities and Accommodations */}
+            <div className="space-y-4 border-t border-border pt-6">
+              <div className="flex gap-6 border-b border-stone/15">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("activities")}
+                  className={`pb-3 text-sm font-semibold uppercase tracking-widest transition-colors ${
+                    activeTab === "activities"
+                      ? "text-forest border-b-2 border-forest -mb-0.5"
+                      : "text-stone/50 hover:text-stone/70"
+                  }`}
+                >
+                  Things to do
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("accommodation")}
+                  className={`pb-3 text-sm font-semibold uppercase tracking-widest transition-colors ${
+                    activeTab === "accommodation"
+                      ? "text-forest border-b-2 border-forest -mb-0.5"
+                      : "text-stone/50 hover:text-stone/70"
+                  }`}
+                >
+                  Accommodation
+                </button>
               </div>
-              <ActivityGrid
-                ref={gridRef}
-                activities={day.activities}
-                onChange={onActivitiesChange}
-                currency={currency}
-                loc={day.loc}
-                travellers={travellers}
-              />
+
+              {activeTab === "activities" && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-rust flex-none">★</span>
+                      <h3 className="font-sans text-sm font-semibold uppercase tracking-widest text-forest">
+                        Things to do in {day.loc || "this stop"}
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-none">
+                      <button
+                        type="button"
+                        onClick={() => gridRef.current?.scrollByPage(-1)}
+                        aria-label="Scroll activities left"
+                        disabled={!canScrollLeft}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-stone/30 text-stone/60 transition-colors hover:text-forest hover:border-forest/50 disabled:opacity-40 disabled:cursor-default"
+                      >
+                        <span className="text-sm">‹</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => gridRef.current?.scrollByPage(1)}
+                        aria-label="Scroll activities right"
+                        disabled={!canScrollRight}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-stone/30 text-stone/60 transition-colors hover:text-forest hover:border-forest/50 disabled:opacity-40 disabled:cursor-default"
+                      >
+                        <span className="text-sm">›</span>
+                      </button>
+                    </div>
+                  </div>
+                  <ActivityGrid
+                    ref={gridRef}
+                    activities={day.activities}
+                    onChange={onActivitiesChange}
+                    currency={currency}
+                    loc={day.loc}
+                    travellers={travellers}
+                  />
+                </div>
+              )}
+
+              {activeTab === "accommodation" && (
+                <div className="space-y-3">
+                  <p className="text-sm text-stone/60">
+                    Shortlisted stays for your time in {day.loc || "this stop"}.
+                  </p>
+                  <AccommodationSection
+                    accommodations={day.accommodations || []}
+                    accommodationWishlistUrl={day.accommodationWishlistUrl || ""}
+                    currency={currency}
+                    loc={day.loc}
+                    onAccommodationsChange={onAccommodationsChange}
+                    onWishlistUrlChange={onAccommodationWishlistUrlChange}
+                  />
+                </div>
+              )}
             </div>
           </div>
 

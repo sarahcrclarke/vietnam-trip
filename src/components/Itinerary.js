@@ -33,7 +33,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   // shape into a binary shape keyed by stable traveller id.
   const [stops, setStops] = useState(() =>
     itinerary.days.map((d) => {
-      const { transit, activities, cost, ...rest } = d;
+      const { transit, activities, cost, accommodations, accommodationWishlistUrl, ...rest } = d;
       return {
         ...rest,
         cost: cost != null ? String(cost) : "",
@@ -43,6 +43,8 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
           cost: a.cost ? String(a.cost) : "",
           votes: migrateVotes(a.votes),
         })),
+        accommodations: accommodations || [],
+        accommodationWishlistUrl: accommodationWishlistUrl || "",
       };
     })
   );
@@ -156,6 +158,16 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
     []
   );
 
+  const updateAccommodations = useCallback(
+    (id, accommodations) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, accommodations } : s))),
+    []
+  );
+
+  const updateAccommodationWishlistUrl = useCallback(
+    (id, accommodationWishlistUrl) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, accommodationWishlistUrl } : s))),
+    []
+  );
+
   return (
     <div className="flex flex-col">
       {stops.length === 0 ? (
@@ -187,6 +199,8 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onDateChange={updateDate}
                   onCostChange={(cost) => updateCost(stop.id, cost)}
                   onActivitiesChange={(activities) => updateActivities(stop.id, activities)}
+                  onAccommodationsChange={(accommodations) => updateAccommodations(stop.id, accommodations)}
+                  onAccommodationWishlistUrlChange={(url) => updateAccommodationWishlistUrl(stop.id, url)}
                   duration={duration}
                   travellers={travellers}
                 />
