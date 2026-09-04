@@ -7,8 +7,8 @@ import { CloseIcon } from "./icons";
 // `null` means the item stays inert, same as before.
 const NAV_ITEMS = [
   { label: "ITINERARY", tab: "itinerary" },
-  { label: "MAP", tab: null },
   { label: "VOTES", tab: "votes" },
+  { label: "MAP", tab: "map" },
   { label: "PHOTOS", tab: null },
   { label: "INFO", tab: null },
 ];

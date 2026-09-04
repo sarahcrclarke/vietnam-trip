@@ -5,6 +5,7 @@ import Journey, { transitToJourney } from "./Journey";
 import StopPanel from "./StopPanel";
 import CostSummary from "./CostSummary";
 import VotesPanel from "./VotesPanel";
+import MapPanel from "./MapPanel";
 import { daysBetween, formatDuration } from "@/lib/duration";
 import { migrateVotes } from "@/lib/voting";
 import { migrateAccommodation } from "@/lib/accommodation";
@@ -25,7 +26,7 @@ import { migrateAccommodation } from "@/lib/accommodation";
 // the summary can never drift out of sync with the editing UI. Everything
 // else (name, description, tag, photo, activity name/link/image/travel time)
 // stays local to its own component, unchanged.
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary" }) {
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -253,6 +254,14 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
           onToggleAccommodationVote={toggleAccommodationVote}
           onSelectAccommodation={selectAccommodation}
         />
+      </div>
+    );
+  }
+
+  if (view === "map") {
+    return (
+      <div className="flex flex-col">
+        <MapPanel stops={stops} tripReturnDate={tripReturnDate} onViewChange={onViewChange} />
       </div>
     );
   }

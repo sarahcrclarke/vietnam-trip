@@ -131,9 +131,6 @@ export default function TripHeader({
             >
               ITINERARY
             </button>
-            <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
-              MAP
-            </button>
             <button
               type="button"
               onClick={() => onTabChange("votes")}
@@ -142,6 +139,15 @@ export default function TripHeader({
               }`}
             >
               VOTES
+            </button>
+            <button
+              type="button"
+              onClick={() => onTabChange("map")}
+              className={`font-sans text-sm transition-colors ${
+                activeTab === "map" ? "text-forest" : "text-muted hover:text-forest"
+              }`}
+            >
+              MAP
             </button>
             <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
               PHOTOS
