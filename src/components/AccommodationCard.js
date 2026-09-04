@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CameraIcon } from "./icons";
+import AccommodationVotes from "./AccommodationVotes";
 
-export default function AccommodationCard({ accommodation, currency, onEdit, onRemove }) {
+export default function AccommodationCard({ accommodation, currency, voters, unanimous, onToggleVote, onEdit, onRemove }) {
   const { name, type, location, image, price, rating, reviewCount, link } = accommodation;
   const [editing, setEditing] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -305,7 +306,14 @@ export default function AccommodationCard({ accommodation, currency, onEdit, onR
         )}
       </div>
 
-      <h4 className="mt-3 font-display text-base font-semibold leading-tight text-foreground truncate">
+      {unanimous && (
+        <p className="mt-2 flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-rust">
+          <span aria-hidden>★</span>
+          Everyone&rsquo;s pick
+        </p>
+      )}
+
+      <h4 className={`font-display text-base font-semibold leading-tight text-foreground truncate ${unanimous ? "mt-1" : "mt-3"}`}>
         {nameVal}
       </h4>
 
@@ -346,6 +354,12 @@ export default function AccommodationCard({ accommodation, currency, onEdit, onR
           <span aria-hidden>↗</span>
         </a>
       )}
+
+      <AccommodationVotes
+        voters={voters}
+        votes={accommodation.votes || {}}
+        onToggle={onToggleVote}
+      />
     </div>
   );
 }

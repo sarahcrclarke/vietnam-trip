@@ -43,7 +43,10 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
           cost: a.cost ? String(a.cost) : "",
           votes: migrateVotes(a.votes),
         })),
-        accommodations: accommodations || [],
+        accommodations: (accommodations || []).map((acc) => ({
+          ...acc,
+          votes: acc.votes || {},
+        })),
         accommodationWishlistUrl: accommodationWishlistUrl || "",
       };
     })
@@ -132,7 +135,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
     const id = `new-stop-${Date.now()}-${seq.current}`;
     setStops((prev) => [
       ...prev,
-      { id, loc: "", date: "", desc: "", tag: "", cost: "0", photo: null, journey: [], activities: [] },
+      { id, loc: "", date: "", desc: "", tag: "", cost: "0", photo: null, journey: [], activities: [], accommodations: [], accommodationWishlistUrl: "" },
     ]);
   };
 

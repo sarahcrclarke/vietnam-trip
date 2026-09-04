@@ -233,6 +233,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
                     accommodationWishlistUrl={day.accommodationWishlistUrl || ""}
                     currency={currency}
                     loc={day.loc}
+                    travellers={travellers}
                     onAccommodationsChange={onAccommodationsChange}
                     onWishlistUrlChange={onAccommodationWishlistUrlChange}
                   />

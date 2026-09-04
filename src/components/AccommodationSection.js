@@ -2,14 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import AccommodationCard from "./AccommodationCard";
+import { isUnanimous } from "@/lib/voting";
 
-export default function AccommodationSection({ accommodations, accommodationWishlistUrl, currency, loc, onAccommodationsChange, onWishlistUrlChange }) {
+export default function AccommodationSection({ accommodations, accommodationWishlistUrl, currency, loc, travellers, onAccommodationsChange, onWishlistUrlChange }) {
   const gridRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [editingWishlist, setEditingWishlist] = useState(false);
   const [wishlistUrlVal, setWishlistUrlVal] = useState(accommodationWishlistUrl || "");
   const seq = useRef(0);
+
+  const voters = travellers.filter((t) => t.included && t.voter);
 
   useEffect(() => {
     const updateScrollState = () => {
@@ -25,12 +28,22 @@ export default function AccommodationSection({ accommodations, accommodationWish
 
   const handleEditAccommodation = (updated) => {
     onAccommodationsChange(
-      accommodations.map((a) => (a.id === updated.id ? updated : a))
+      accommodations.map((a) => (a.id === updated.id ? { ...updated, votes: a.votes } : a))
     );
   };
 
   const handleRemoveAccommodation = (id) => {
     onAccommodationsChange(accommodations.filter((a) => a.id !== id));
+  };
+
+  const handleToggleVote = (accommodationId, travellerId) => {
+    onAccommodationsChange(
+      accommodations.map((a) =>
+        a.id === accommodationId
+          ? { ...a, votes: { ...a.votes, [travellerId]: !a.votes[travellerId] } }
+          : a
+      )
+    );
   };
 
   const handleAddAccommodation = () => {
@@ -165,16 +178,25 @@ export default function AccommodationSection({ accommodations, accommodationWish
             ref={gridRef}
             className="flex min-w-0 snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2 sm:gap-4"
           >
-            {accommodations.map((accommodation) => (
-              <div key={accommodation.id} className="min-w-0 flex-shrink-0 basis-full sm:basis-[calc(33.333%-0.667rem)] snap-start">
-                <AccommodationCard
-                  accommodation={accommodation}
-                  currency={currency}
-                  onEdit={handleEditAccommodation}
-                  onRemove={handleRemoveAccommodation}
-                />
-              </div>
-            ))}
+            {(() => {
+              const unanimous = accommodations.filter((a) => isUnanimous(a.votes, voters));
+              const nonUnanimous = accommodations.filter((a) => !isUnanimous(a.votes, voters));
+              const ranked = [...unanimous, ...nonUnanimous];
+
+              return ranked.map((accommodation) => (
+                <div key={accommodation.id} className="min-w-0 flex-shrink-0 basis-full sm:basis-[calc(33.333%-0.667rem)] snap-start">
+                  <AccommodationCard
+                    accommodation={accommodation}
+                    currency={currency}
+                    voters={voters}
+                    unanimous={isUnanimous(accommodation.votes, voters)}
+                    onToggleVote={(travellerId) => handleToggleVote(accommodation.id, travellerId)}
+                    onEdit={handleEditAccommodation}
+                    onRemove={handleRemoveAccommodation}
+                  />
+                </div>
+              ));
+            })()}
 
             {/* + ADD ACCOMMODATION as final carousel item */}
             <div className="min-w-0 flex-shrink-0 basis-full sm:basis-[calc(33.333%-0.667rem)] flex snap-start">
