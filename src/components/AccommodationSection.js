@@ -67,6 +67,7 @@ export default function AccommodationSection({ accommodations, accommodationWish
         rating: null,
         reviewCount: null,
         link: "",
+        votes: {},
       },
     ]);
   };
