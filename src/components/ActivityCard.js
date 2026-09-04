@@ -5,29 +5,21 @@ import { CameraIcon } from "./icons";
 import ActivityVotes from "./ActivityVotes";
 import ActivityFields from "./ActivityFields";
 
-export default function ActivityCard({ activity, currency, voters, unanimous, onToggleVote, onCostChange, onRemove }) {
+// Controlled by Itinerary's stops state, via ActivityGrid (not local),
+// because the Votes page reads name/image straight from `stops` and must
+// reflect an edit immediately, including across a tab switch (which
+// unmounts this component). Existing images start from the JSON base64 (a
+// data: URL, never revoked); device uploads use object URLs, revoked on
+// replace/remove (certainly orphaned at that moment) but deliberately not on
+// unmount, since the shared `image` value may still be in use elsewhere
+// (Votes) after this component unmounts.
+export default function ActivityCard({ activity, currency, voters, unanimous, onToggleVote, onCostChange, onNameChange, onLinkChange, onTravelTimeChange, onImageChange, onRemove }) {
   const { name, link, cost, image, votes } = activity;
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
-  // Name is always editable — existing JSON names and newly-added activities
-  // both edit the same client-side state. No persistence; a refresh restores
-  // the JSON value.
-  const [nameVal, setNameVal] = useState(name ?? "");
-
-  // Image is client-side state only. Existing images start from the JSON
-  // base64 (a data: URL, never revoked); device uploads use object URLs which
-  // we revoke on replace/remove/unmount to avoid leaks. No persistence.
-  const [imgSrc, setImgSrc] = useState(image || null);
   const objectUrlRef = useRef(null);
   const fileRef = useRef(null);
-
-  useEffect(
-    () => () => {
-      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    },
-    []
-  );
 
   useEffect(() => {
     if (!showMenu) return undefined;
@@ -54,7 +46,7 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
     const url = URL.createObjectURL(file);
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     objectUrlRef.current = url;
-    setImgSrc(url);
+    onImageChange(url);
   };
 
   const removePhoto = () => {
@@ -62,17 +54,17 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
-    setImgSrc(null);
+    onImageChange(null);
   };
 
-  const label = nameVal;
+  const label = name;
 
   return (
     <div className="group flex snap-start flex-col">
       <div className="relative overflow-hidden rounded-[5px]">
-        {imgSrc ? (
+        {image ? (
           <img
-            src={imgSrc}
+            src={image}
             alt={label || "Activity image"}
             className="aspect-[4/3] w-full object-cover"
           />
@@ -111,9 +103,9 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
                 }}
                 className="block w-full text-left text-xs text-muted transition-colors hover:text-forest"
               >
-                {imgSrc ? "Change photo" : "Add photo"}
+                {image ? "Change photo" : "Add photo"}
               </button>
-              {imgSrc && (
+              {image && (
                 <button
                   type="button"
                   onClick={() => {
@@ -184,8 +176,8 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
 
       <input
         type="text"
-        value={nameVal}
-        onChange={(e) => setNameVal(e.target.value)}
+        value={name ?? ""}
+        onChange={(e) => onNameChange(e.target.value)}
         placeholder="Activity name"
         aria-label="Activity name"
         className={`w-full truncate rounded-sm bg-transparent font-sans text-xs font-semibold text-foreground placeholder:font-normal placeholder:text-stone/40 hover:bg-stone/[0.06] focus:bg-stone/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/30 sm:text-sm ${
@@ -197,7 +189,9 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
         link={link}
         cost={cost}
         onCostChange={onCostChange}
+        onLinkChange={onLinkChange}
         travelTime={activity.travelTime}
+        onTravelTimeChange={onTravelTimeChange}
         currency={currency}
       />
 

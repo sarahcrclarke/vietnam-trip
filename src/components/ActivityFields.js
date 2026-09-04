@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { ClockIcon, ExternalLinkIcon } from "./icons";
 
 // Non-negative monetary value: empty, or digits with up to 2 decimals.
@@ -29,12 +28,14 @@ function normalizeUrl(raw) {
 // with nothing filled in doesn't look like an unfinished form. Still fully
 // editable; hover/focus give a restrained cue rather than a permanent outline.
 //
-// Cost is controlled by the parent (ActivityGrid, via Itinerary's stops
-// state) because the trip cost summary needs every activity's live cost;
-// link and travel time stay local — nothing outside this card needs them.
-export default function ActivityFields({ link, cost, onCostChange, travelTime, currency }) {
-  const [linkVal, setLinkVal] = useState(link ?? "");
-  const [travelTimeVal, setTravelTimeVal] = useState(travelTime ?? "");
+// Cost, link and travel time are all controlled by the parent (ActivityGrid,
+// via Itinerary's stops state) — cost because the trip cost summary needs
+// every activity's live cost; link and travel time so an edit is never lost
+// when switching away from and back to this stop (the card unmounts on a
+// MAP/VOTES tab switch).
+export default function ActivityFields({ link, cost, onCostChange, onLinkChange, travelTime, onTravelTimeChange, currency }) {
+  const linkVal = link ?? "";
+  const travelTimeVal = travelTime ?? "";
   const costVal = cost ?? "";
 
   const handleCostChange = (e) => {
@@ -56,7 +57,7 @@ export default function ActivityFields({ link, cost, onCostChange, travelTime, c
           type="text"
           inputMode="url"
           value={linkVal}
-          onChange={(e) => setLinkVal(e.target.value)}
+          onChange={(e) => onLinkChange(e.target.value)}
           placeholder="+ Add link"
           aria-label="Activity link"
           className={`min-w-0 flex-1 truncate rounded-sm bg-transparent focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/30 ${
@@ -105,7 +106,7 @@ export default function ActivityFields({ link, cost, onCostChange, travelTime, c
         <input
           type="text"
           value={travelTimeVal}
-          onChange={(e) => setTravelTimeVal(e.target.value)}
+          onChange={(e) => onTravelTimeChange(e.target.value)}
           placeholder="+ Add travel time"
           aria-label="Travel time from accommodation"
           className={`w-full min-w-0 truncate rounded-sm bg-transparent focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/30 ${

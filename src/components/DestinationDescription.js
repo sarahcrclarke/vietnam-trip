@@ -1,11 +1,14 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 // Editable description that reads like the existing paragraph when not focused
 // and grows with its content. Borderless, same typography / padding.
-export default function DestinationDescription({ value }) {
-  const [text, setText] = useState(value ?? "");
+// Controlled by Itinerary's stops state (not local) because MAP's selected-
+// destination preview reads a stop's description straight from `stops` and
+// must reflect an edit immediately.
+export default function DestinationDescription({ value, onChange }) {
+  const text = value ?? "";
   const ref = useRef(null);
 
   useLayoutEffect(() => {
@@ -19,7 +22,7 @@ export default function DestinationDescription({ value }) {
     <textarea
       ref={ref}
       value={text}
-      onChange={(e) => setText(e.target.value)}
+      onChange={(e) => onChange(e.target.value)}
       rows={1}
       placeholder="Description"
       aria-label="Destination description"

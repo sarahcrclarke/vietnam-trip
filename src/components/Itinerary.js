@@ -18,14 +18,18 @@ import { migrateAccommodation } from "@/lib/accommodation";
 // stable ids stay the React keys, so stop components are never remounted and
 // all temporary state inside them is preserved.
 //
-// A stop's `date`, `cost`, `journey` and `activities` are controlled here
-// (not owned locally by their editors) because: a destination's duration is
-// derived from its own date through the NEXT stop's date; and the trip cost
-// summary needs every destination's cost, every transport leg's cost across
-// every journey, and every activity's cost — all live, all in one place, so
-// the summary can never drift out of sync with the editing UI. Everything
-// else (name, description, tag, photo, activity name/link/image/travel time)
-// stays local to its own component, unchanged.
+// A stop's `date`, `cost`, `journey`, `activities`, `loc` (name), `desc` and
+// `photo` are all controlled here (not owned locally by their editors) so
+// this is the one shared source of truth every view (MAP, VOTES, Cost
+// Summary) reads from — a destination's duration is derived from its own
+// date through the NEXT stop's date; the trip cost summary needs every
+// destination's cost, every transport leg's cost across every journey, and
+// every activity's cost, all live, all in one place; and MAP/VOTES need a
+// stop's/activity's current name, description and photo to reflect an edit
+// immediately, without a tab switch losing it. `tag` stays derived-only
+// (never independently editable — see DestinationTag). Activity `name`,
+// `link`, `travelTime` and `image` are controlled by ActivityGrid for the
+// same reason; accommodation fields are controlled by AccommodationSection.
 export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
@@ -153,6 +157,21 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   };
 
   const removeStop = (id) => setStops((prev) => prev.filter((s) => s.id !== id));
+
+  const updateName = useCallback(
+    (id, loc) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, loc } : s))),
+    []
+  );
+
+  const updateDescription = useCallback(
+    (id, desc) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, desc } : s))),
+    []
+  );
+
+  const updatePhoto = useCallback(
+    (id, photo) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, photo } : s))),
+    []
+  );
 
   const updateDate = useCallback(
     (id, date) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, date } : s))),
@@ -306,6 +325,9 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onDragStart={startDrag}
                   onMoveStop={moveStop}
                   dragging={draggingId === stop.id}
+                  onNameChange={(loc) => updateName(stop.id, loc)}
+                  onDescriptionChange={(desc) => updateDescription(stop.id, desc)}
+                  onPhotoChange={(photo) => updatePhoto(stop.id, photo)}
                   onDateChange={updateDate}
                   onCostChange={(cost) => updateCost(stop.id, cost)}
                   onActivitiesChange={(activities) => updateActivities(stop.id, activities)}

@@ -11,7 +11,7 @@ import DestinationCost from "./DestinationCost";
 import DestinationPhoto from "./DestinationPhoto";
 import { DragHandleIcon } from "./icons";
 
-export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onDateChange, onCostChange, onActivitiesChange, onAccommodationsChange, onAccommodationWishlistUrlChange, onSelectedAccommodationChange, duration, travellers }) {
+export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onNameChange, onDescriptionChange, onPhotoChange, onDateChange, onCostChange, onActivitiesChange, onAccommodationsChange, onAccommodationWishlistUrlChange, onSelectedAccommodationChange, duration, travellers }) {
   const number = String(index + 1).padStart(2, "0");
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -99,7 +99,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
           </div>
 
           {/* Photo section */}
-          <DestinationPhoto photo={day.photo} loc={day.loc} />
+          <DestinationPhoto photo={day.photo} loc={day.loc} onChange={onPhotoChange} />
 
           {/* Main content */}
           <div className={`space-y-4 px-4 py-6 sm:px-6 ${dragging ? "bg-stone/5" : ""}`}>
@@ -108,7 +108,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <h2>
-                  <DestinationName value={day.loc} />
+                  <DestinationName value={day.loc} onChange={onNameChange} />
                 </h2>
               </div>
 
@@ -153,7 +153,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
             </div>
 
             {/* Description */}
-            <DestinationDescription value={day.desc} />
+            <DestinationDescription value={day.desc} onChange={onDescriptionChange} />
 
             {/* Tabs — Activities and Accommodations */}
             <div className="space-y-4 border-t border-border pt-6">

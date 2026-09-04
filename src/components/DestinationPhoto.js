@@ -1,23 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { CameraIcon } from "./icons";
 
 // Destination photo management — same approved behaviour as activity images,
-// sized for the stop photo. Client-side only; object URLs revoked on
-// replace/remove/unmount. Existing JSON photos are data: URLs (never revoked).
-export default function DestinationPhoto({ photo, loc }) {
-  const [imgSrc, setImgSrc] = useState(photo || null);
+// sized for the stop photo. Controlled by Itinerary's stops state (not
+// local) because MAP's destination preview/strip render a stop's photo
+// straight from `stops` and must reflect a change immediately, including
+// across a tab switch (which unmounts this component).
+//
+// Uploaded photos are client-side object URLs only (no Supabase Storage
+// yet — see AGENTS-facing audit notes). An object URL is revoked when THIS
+// instance replaces or removes it, since at that moment it's certainly
+// orphaned; it is deliberately NOT revoked on unmount, because the shared
+// `photo` value may still be in use elsewhere (MAP) after this component
+// unmounts. Existing JSON photos are data: URLs and are never revoked.
+export default function DestinationPhoto({ photo, loc, onChange }) {
   const [showMenu, setShowMenu] = useState(false);
   const objectUrlRef = useRef(null);
   const fileRef = useRef(null);
-
-  useEffect(
-    () => () => {
-      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    },
-    []
-  );
 
   const openPicker = () => fileRef.current?.click();
 
@@ -28,7 +29,7 @@ export default function DestinationPhoto({ photo, loc }) {
     const url = URL.createObjectURL(file);
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     objectUrlRef.current = url;
-    setImgSrc(url);
+    onChange(url);
   };
 
   const removePhoto = () => {
@@ -36,15 +37,15 @@ export default function DestinationPhoto({ photo, loc }) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
-    setImgSrc(null);
+    onChange(null);
   };
 
   return (
     <div className="group relative overflow-hidden rounded-[5px]">
-      {imgSrc ? (
+      {photo ? (
         <>
           <img
-            src={imgSrc}
+            src={photo}
             alt={loc}
             className="h-72 w-full object-cover sm:h-96"
           />

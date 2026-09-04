@@ -52,6 +52,13 @@ const ActivityGrid = forwardRef(function ActivityGrid(
   const updateCost = (activityId, cost) =>
     onChange(activities.map((a) => (a.id === activityId ? { ...a, cost } : a)));
 
+  // name/link/travelTime/image share this one patch path — controlled here
+  // (not local to ActivityCard/ActivityFields) so the Votes page's activity
+  // rows, which read straight from this same `activities` array via
+  // Itinerary's `stops`, reflect an edit immediately.
+  const patchActivity = (activityId, patch) =>
+    onChange(activities.map((a) => (a.id === activityId ? { ...a, ...patch } : a)));
+
   // Unanimous activities float to the top, keeping their existing relative
   // order; everyone else keeps their existing relative order too — nothing
   // beyond promoting the unanimous ones is reshuffled. Recomputed from live
@@ -107,6 +114,10 @@ const ActivityGrid = forwardRef(function ActivityGrid(
             unanimous={isUnanimous(activity.votes, voters)}
             onToggleVote={(travellerId) => toggleVote(activity.id, travellerId)}
             onCostChange={(cost) => updateCost(activity.id, cost)}
+            onNameChange={(name) => patchActivity(activity.id, { name })}
+            onLinkChange={(link) => patchActivity(activity.id, { link })}
+            onTravelTimeChange={(travelTime) => patchActivity(activity.id, { travelTime })}
+            onImageChange={(image) => patchActivity(activity.id, { image })}
             onRemove={removeActivity}
           />
         ))}
