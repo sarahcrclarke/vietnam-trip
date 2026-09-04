@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import AccommodationCard from "./AccommodationCard";
 import { isUnanimous } from "@/lib/voting";
+import { isAirbnbUrl } from "@/lib/accommodation";
 
 export default function AccommodationSection({ accommodations, accommodationWishlistUrl, selectedAccommodationId, currency, loc, travellers, onAccommodationsChange, onWishlistUrlChange, onSelectedAccommodationChange }) {
   const gridRef = useRef(null);
@@ -11,6 +12,9 @@ export default function AccommodationSection({ accommodations, accommodationWish
   const [editingWishlist, setEditingWishlist] = useState(false);
   const [wishlistUrlVal, setWishlistUrlVal] = useState(accommodationWishlistUrl || "");
   const [newlyAddedId, setNewlyAddedId] = useState(null);
+  const [addingFromAirbnb, setAddingFromAirbnb] = useState(false);
+  const [airbnbUrlVal, setAirbnbUrlVal] = useState("");
+  const [airbnbUrlError, setAirbnbUrlError] = useState(null);
   const seq = useRef(0);
 
   const voters = travellers.filter((t) => t.included && t.voter);
@@ -29,7 +33,9 @@ export default function AccommodationSection({ accommodations, accommodationWish
 
   const handleEditAccommodation = (updated) => {
     onAccommodationsChange(
-      accommodations.map((a) => (a.id === updated.id ? { ...updated, votes: a.votes } : a))
+      accommodations.map((a) =>
+        a.id === updated.id ? { ...updated, votes: a.votes, source: a.source } : a
+      )
     );
   };
 
@@ -53,7 +59,10 @@ export default function AccommodationSection({ accommodations, accommodationWish
     );
   };
 
-  const handleAddAccommodation = () => {
+  // Shared creation flow — both the generic "+ Add accommodation" button and
+  // "+ Add from Airbnb" create the same accommodation shape via this one
+  // path, differing only in which fields they pre-populate.
+  const createAccommodation = (overrides = {}) => {
     seq.current += 1;
     const id = `accommodation-${Date.now()}-${seq.current}`;
     onAccommodationsChange([
@@ -70,9 +79,34 @@ export default function AccommodationSection({ accommodations, accommodationWish
         reviewCount: null,
         link: "",
         votes: {},
+        ...overrides,
       },
     ]);
     setNewlyAddedId(id);
+  };
+
+  const handleAddAccommodation = () => createAccommodation();
+
+  const handleAddFromAirbnb = () => {
+    const url = airbnbUrlVal.trim();
+    if (!url) {
+      setAirbnbUrlError("Enter an Airbnb property URL.");
+      return;
+    }
+    if (!isAirbnbUrl(url)) {
+      setAirbnbUrlError("That doesn't look like an Airbnb URL.");
+      return;
+    }
+    createAccommodation({ link: url, source: "airbnb" });
+    setAirbnbUrlVal("");
+    setAirbnbUrlError(null);
+    setAddingFromAirbnb(false);
+  };
+
+  const handleCancelAddFromAirbnb = () => {
+    setAirbnbUrlVal("");
+    setAirbnbUrlError(null);
+    setAddingFromAirbnb(false);
   };
 
   const handleSaveWishlist = () => {
@@ -95,7 +129,7 @@ export default function AccommodationSection({ accommodations, accommodationWish
               AIRBNB WISHLIST
             </h4>
           </div>
-          {!editingWishlist && (
+          {!editingWishlist && !addingFromAirbnb && (
             <div className="flex items-center gap-3">
               {accommodationWishlistUrl ? (
                 <>
@@ -125,6 +159,13 @@ export default function AccommodationSection({ accommodations, accommodationWish
                   + Add wishlist
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => setAddingFromAirbnb(true)}
+                className="text-xs text-stone/60 transition-colors hover:text-forest"
+              >
+                + Add from Airbnb
+              </button>
             </div>
           )}
         </div>
@@ -149,6 +190,43 @@ export default function AccommodationSection({ accommodations, accommodationWish
               <button
                 type="button"
                 onClick={handleCancelWishlist}
+                className="text-xs text-stone/60 transition-colors hover:text-forest"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {addingFromAirbnb && (
+          <div className="mt-3 space-y-2">
+            <span className="block text-[10px] uppercase tracking-wide text-stone/40">
+              Airbnb property URL
+            </span>
+            <input
+              type="url"
+              value={airbnbUrlVal}
+              onChange={(e) => {
+                setAirbnbUrlVal(e.target.value);
+                if (airbnbUrlError) setAirbnbUrlError(null);
+              }}
+              placeholder="https://www.airbnb.co.uk/rooms/..."
+              className="w-full rounded-sm bg-transparent px-0.5 -mx-0.5 text-xs text-muted placeholder:text-stone/40 hover:bg-stone/10 focus:bg-stone/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/25"
+            />
+            {airbnbUrlError && (
+              <p className="text-[11px] text-rust">{airbnbUrlError}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleAddFromAirbnb}
+                className="text-xs font-semibold text-forest transition-colors hover:text-forest/80"
+              >
+                Add property
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelAddFromAirbnb}
                 className="text-xs text-stone/60 transition-colors hover:text-forest"
               >
                 Cancel

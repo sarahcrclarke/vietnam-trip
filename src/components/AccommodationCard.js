@@ -392,6 +392,18 @@ export default function AccommodationCard({ accommodation, currency, voters, una
         </a>
       )}
 
+      {accommodation.source === "airbnb" && linkVal && (
+        <a
+          href={linkVal}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 inline-flex items-center gap-1 text-[10px] text-stone/40 transition-colors hover:text-stone/60"
+        >
+          via Airbnb
+          <span aria-hidden>↗</span>
+        </a>
+      )}
+
       <AccommodationVotes
         voters={voters}
         votes={accommodation.votes || {}}
