@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { CameraIcon } from "./icons";
 import AccommodationVotes from "./AccommodationVotes";
 
-export default function AccommodationCard({ accommodation, currency, voters, unanimous, selected, onToggleVote, onSelectStay, onEdit, onRemove }) {
+export default function AccommodationCard({ accommodation, currency, voters, unanimous, selected, startEditing, onToggleVote, onSelectStay, onEdit, onRemove }) {
   const { name, type, location, image, pricePerNight, totalPrice, rating, reviewCount, link } = accommodation;
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(Boolean(startEditing));
   const [showMenu, setShowMenu] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const menuRef = useRef(null);

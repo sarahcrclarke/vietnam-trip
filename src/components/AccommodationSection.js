@@ -10,6 +10,7 @@ export default function AccommodationSection({ accommodations, accommodationWish
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [editingWishlist, setEditingWishlist] = useState(false);
   const [wishlistUrlVal, setWishlistUrlVal] = useState(accommodationWishlistUrl || "");
+  const [newlyAddedId, setNewlyAddedId] = useState(null);
   const seq = useRef(0);
 
   const voters = travellers.filter((t) => t.included && t.voter);
@@ -54,10 +55,11 @@ export default function AccommodationSection({ accommodations, accommodationWish
 
   const handleAddAccommodation = () => {
     seq.current += 1;
+    const id = `accommodation-${Date.now()}-${seq.current}`;
     onAccommodationsChange([
       ...accommodations,
       {
-        id: `accommodation-${Date.now()}-${seq.current}`,
+        id,
         name: "",
         type: "",
         location: "",
@@ -70,6 +72,7 @@ export default function AccommodationSection({ accommodations, accommodationWish
         votes: {},
       },
     ]);
+    setNewlyAddedId(id);
   };
 
   const handleSaveWishlist = () => {
@@ -199,6 +202,7 @@ export default function AccommodationSection({ accommodations, accommodationWish
                     voters={voters}
                     unanimous={isUnanimous(accommodation.votes, voters)}
                     selected={accommodation.id === selectedAccommodationId}
+                    startEditing={accommodation.id === newlyAddedId}
                     onToggleVote={(travellerId) => handleToggleVote(accommodation.id, travellerId)}
                     onSelectStay={() => handleSelectStay(accommodation.id)}
                     onEdit={handleEditAccommodation}
