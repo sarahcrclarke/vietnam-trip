@@ -26,7 +26,7 @@ import { migrateAccommodation } from "@/lib/accommodation";
 // the summary can never drift out of sync with the editing UI. Everything
 // else (name, description, tag, photo, activity name/link/image/travel time)
 // stays local to its own component, unchanged.
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange }) {
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -130,6 +130,18 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
     },
     []
   );
+
+  // Deep-link from MAP's "View destination" — scrolls to the requested
+  // stop's own anchor (its stable id, set by StopPanel; see its
+  // scroll-margin-top for the resting offset) once the itinerary view is
+  // actually on screen, then consumes the request immediately so a later,
+  // ordinary switch to ITINERARY never re-triggers it.
+  useEffect(() => {
+    if (view !== "itinerary" || !scrollToStopId) return;
+    const el = document.getElementById(`stop-${scrollToStopId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    onScrollToStopHandled?.();
+  }, [view, scrollToStopId, onScrollToStopHandled]);
 
   const addStop = () => {
     seq.current += 1;

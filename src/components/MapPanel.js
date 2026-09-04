@@ -143,7 +143,7 @@ export default function MapPanel({ stops, tripReturnDate, onViewChange }) {
             duration={selectedDuration}
             transit={selectedTransit}
             hasCoords={selectedHasCoords}
-            onViewDestination={() => onViewChange("itinerary")}
+            onViewDestination={() => onViewChange("itinerary", selected.id)}
           />
         </div>
       </div>
@@ -155,7 +155,7 @@ export default function MapPanel({ stops, tripReturnDate, onViewChange }) {
           duration={selectedDuration}
           transit={selectedTransit}
           hasCoords={selectedHasCoords}
-          onViewDestination={() => onViewChange("itinerary")}
+          onViewDestination={() => onViewChange("itinerary", selected.id)}
         />
       </div>
 

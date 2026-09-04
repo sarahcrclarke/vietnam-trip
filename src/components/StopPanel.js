@@ -60,7 +60,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
   }, [day.activities.length]);
 
   return (
-    <div className="mx-auto w-full max-w-editorial px-4 sm:px-6">
+    <div id={`stop-${day.id}`} className="mx-auto w-full max-w-editorial scroll-mt-6 px-4 sm:px-6">
       <div className="flex gap-6">
         {/* Timeline column — the number sits directly on the fine journey
             line via a short connecting tick, rather than floating beside it.

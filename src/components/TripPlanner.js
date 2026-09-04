@@ -27,6 +27,18 @@ export default function TripPlanner({ itinerary }) {
   // stay inert. Kept here (not in Itinerary) since it also drives TripHeader.
   const [activeTab, setActiveTab] = useState("itinerary");
 
+  // A one-time "scroll to this stop" request, set only by MAP's "View
+  // destination" (which passes a stop id alongside the view change) and
+  // consumed by Itinerary right after it acts on it — so switching to
+  // ITINERARY normally (top nav / mobile menu) never triggers a stray
+  // scroll from a previously-viewed map destination.
+  const [scrollToStopId, setScrollToStopId] = useState(null);
+
+  const handleViewChange = (nextView, stopId) => {
+    if (stopId) setScrollToStopId(stopId);
+    setActiveTab(nextView);
+  };
+
   return (
     <>
       <TripHeader
@@ -47,7 +59,9 @@ export default function TripPlanner({ itinerary }) {
         extraCosts={extraCosts}
         onExtraCostsChange={setExtraCosts}
         view={activeTab}
-        onViewChange={setActiveTab}
+        onViewChange={handleViewChange}
+        scrollToStopId={scrollToStopId}
+        onScrollToStopHandled={() => setScrollToStopId(null)}
       />
     </>
   );
