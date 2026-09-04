@@ -11,7 +11,7 @@ import DestinationCost from "./DestinationCost";
 import DestinationPhoto from "./DestinationPhoto";
 import { DragHandleIcon } from "./icons";
 
-export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onDateChange, onCostChange, onActivitiesChange, onAccommodationsChange, onAccommodationWishlistUrlChange, duration, travellers }) {
+export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onDateChange, onCostChange, onActivitiesChange, onAccommodationsChange, onAccommodationWishlistUrlChange, onSelectedAccommodationChange, duration, travellers }) {
   const number = String(index + 1).padStart(2, "0");
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -231,11 +231,13 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
                   <AccommodationSection
                     accommodations={day.accommodations || []}
                     accommodationWishlistUrl={day.accommodationWishlistUrl || ""}
+                    selectedAccommodationId={day.selectedAccommodationId ?? null}
                     currency={currency}
                     loc={day.loc}
                     travellers={travellers}
                     onAccommodationsChange={onAccommodationsChange}
                     onWishlistUrlChange={onAccommodationWishlistUrlChange}
+                    onSelectedAccommodationChange={onSelectedAccommodationChange}
                   />
                 </div>
               )}

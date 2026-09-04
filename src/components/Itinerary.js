@@ -6,6 +6,7 @@ import StopPanel from "./StopPanel";
 import CostSummary from "./CostSummary";
 import { daysBetween, formatDuration } from "@/lib/duration";
 import { migrateVotes } from "@/lib/voting";
+import { migrateAccommodation } from "@/lib/accommodation";
 
 // List-level client state for the itinerary's stops. Initialised from JSON
 // (each stop keeps its stable JSON `id`; new stops get a temporary id). No
@@ -43,11 +44,9 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
           cost: a.cost ? String(a.cost) : "",
           votes: migrateVotes(a.votes),
         })),
-        accommodations: (accommodations || []).map((acc) => ({
-          ...acc,
-          votes: acc.votes || {},
-        })),
+        accommodations: (accommodations || []).map(migrateAccommodation),
         accommodationWishlistUrl: accommodationWishlistUrl || "",
+        selectedAccommodationId: null,
       };
     })
   );
@@ -135,7 +134,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
     const id = `new-stop-${Date.now()}-${seq.current}`;
     setStops((prev) => [
       ...prev,
-      { id, loc: "", date: "", desc: "", tag: "", cost: "0", photo: null, journey: [], activities: [], accommodations: [], accommodationWishlistUrl: "" },
+      { id, loc: "", date: "", desc: "", tag: "", cost: "0", photo: null, journey: [], activities: [], accommodations: [], accommodationWishlistUrl: "", selectedAccommodationId: null },
     ]);
   };
 
@@ -162,12 +161,28 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   );
 
   const updateAccommodations = useCallback(
-    (id, accommodations) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, accommodations } : s))),
+    (id, accommodations) =>
+      setStops((prev) =>
+        prev.map((s) => {
+          if (s.id !== id) return s;
+          const stillSelected = accommodations.some((a) => a.id === s.selectedAccommodationId);
+          return {
+            ...s,
+            accommodations,
+            selectedAccommodationId: stillSelected ? s.selectedAccommodationId : null,
+          };
+        })
+      ),
     []
   );
 
   const updateAccommodationWishlistUrl = useCallback(
     (id, accommodationWishlistUrl) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, accommodationWishlistUrl } : s))),
+    []
+  );
+
+  const updateSelectedAccommodation = useCallback(
+    (id, selectedAccommodationId) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, selectedAccommodationId } : s))),
     []
   );
 
@@ -204,6 +219,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onActivitiesChange={(activities) => updateActivities(stop.id, activities)}
                   onAccommodationsChange={(accommodations) => updateAccommodations(stop.id, accommodations)}
                   onAccommodationWishlistUrlChange={(url) => updateAccommodationWishlistUrl(stop.id, url)}
+                  onSelectedAccommodationChange={(selectedId) => updateSelectedAccommodation(stop.id, selectedId)}
                   duration={duration}
                   travellers={travellers}
                 />

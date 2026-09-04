@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import AccommodationCard from "./AccommodationCard";
 import { isUnanimous } from "@/lib/voting";
 
-export default function AccommodationSection({ accommodations, accommodationWishlistUrl, currency, loc, travellers, onAccommodationsChange, onWishlistUrlChange }) {
+export default function AccommodationSection({ accommodations, accommodationWishlistUrl, selectedAccommodationId, currency, loc, travellers, onAccommodationsChange, onWishlistUrlChange, onSelectedAccommodationChange }) {
   const gridRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -36,6 +36,12 @@ export default function AccommodationSection({ accommodations, accommodationWish
     onAccommodationsChange(accommodations.filter((a) => a.id !== id));
   };
 
+  const handleSelectStay = (accommodationId) => {
+    onSelectedAccommodationChange(
+      selectedAccommodationId === accommodationId ? null : accommodationId
+    );
+  };
+
   const handleToggleVote = (accommodationId, travellerId) => {
     onAccommodationsChange(
       accommodations.map((a) =>
@@ -56,7 +62,8 @@ export default function AccommodationSection({ accommodations, accommodationWish
         type: "",
         location: "",
         image: null,
-        price: null,
+        pricePerNight: null,
+        totalPrice: null,
         rating: null,
         reviewCount: null,
         link: "",
@@ -190,7 +197,9 @@ export default function AccommodationSection({ accommodations, accommodationWish
                     currency={currency}
                     voters={voters}
                     unanimous={isUnanimous(accommodation.votes, voters)}
+                    selected={accommodation.id === selectedAccommodationId}
                     onToggleVote={(travellerId) => handleToggleVote(accommodation.id, travellerId)}
+                    onSelectStay={() => handleSelectStay(accommodation.id)}
                     onEdit={handleEditAccommodation}
                     onRemove={handleRemoveAccommodation}
                   />

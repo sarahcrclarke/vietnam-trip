@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { CameraIcon } from "./icons";
 import AccommodationVotes from "./AccommodationVotes";
 
-export default function AccommodationCard({ accommodation, currency, voters, unanimous, onToggleVote, onEdit, onRemove }) {
-  const { name, type, location, image, price, rating, reviewCount, link } = accommodation;
+export default function AccommodationCard({ accommodation, currency, voters, unanimous, selected, onToggleVote, onSelectStay, onEdit, onRemove }) {
+  const { name, type, location, image, pricePerNight, totalPrice, rating, reviewCount, link } = accommodation;
   const [editing, setEditing] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -15,7 +15,8 @@ export default function AccommodationCard({ accommodation, currency, voters, una
   const [nameVal, setNameVal] = useState(name || "");
   const [typeVal, setTypeVal] = useState(type || "");
   const [locationVal, setLocationVal] = useState(location || "");
-  const [priceVal, setPriceVal] = useState(price ? String(price) : "");
+  const [pricePerNightVal, setPricePerNightVal] = useState(pricePerNight ? String(pricePerNight) : "");
+  const [totalPriceVal, setTotalPriceVal] = useState(totalPrice ? String(totalPrice) : "");
   const [ratingVal, setRatingVal] = useState(rating ? String(rating) : "");
   const [reviewCountVal, setReviewCountVal] = useState(reviewCount ? String(reviewCount) : "");
   const [linkVal, setLinkVal] = useState(link || "");
@@ -71,7 +72,8 @@ export default function AccommodationCard({ accommodation, currency, voters, una
       name: nameVal,
       type: typeVal,
       location: locationVal,
-      price: priceVal ? parseFloat(priceVal) : null,
+      pricePerNight: pricePerNightVal ? parseFloat(pricePerNightVal) : null,
+      totalPrice: totalPriceVal ? parseFloat(totalPriceVal) : null,
       rating: ratingVal ? parseFloat(ratingVal) : null,
       reviewCount: reviewCountVal ? parseInt(reviewCountVal) : null,
       link: linkVal,
@@ -84,7 +86,8 @@ export default function AccommodationCard({ accommodation, currency, voters, una
     setNameVal(name || "");
     setTypeVal(type || "");
     setLocationVal(location || "");
-    setPriceVal(price ? String(price) : "");
+    setPricePerNightVal(pricePerNight ? String(pricePerNight) : "");
+    setTotalPriceVal(totalPrice ? String(totalPrice) : "");
     setRatingVal(rating ? String(rating) : "");
     setReviewCountVal(reviewCount ? String(reviewCount) : "");
     setLinkVal(link || "");
@@ -93,7 +96,6 @@ export default function AccommodationCard({ accommodation, currency, voters, una
   };
 
   const label = nameVal || "Accommodation";
-  const totalPrice = priceVal && price ? (parseFloat(priceVal) * 3).toFixed(2) : null;
 
   if (editing) {
     return (
@@ -166,18 +168,32 @@ export default function AccommodationCard({ accommodation, currency, voters, una
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div>
             <span className="block text-[10px] uppercase tracking-wide text-stone/40">Price/night</span>
             <input
               type="text"
               inputMode="decimal"
-              value={priceVal}
-              onChange={(e) => setPriceVal(e.target.value)}
+              value={pricePerNightVal}
+              onChange={(e) => setPricePerNightVal(e.target.value)}
               placeholder="0"
               className="w-full rounded-sm bg-transparent px-0.5 -mx-0.5 text-xs text-muted placeholder:text-stone/40 hover:bg-stone/10 focus:bg-stone/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/25"
             />
           </div>
+          <div>
+            <span className="block text-[10px] uppercase tracking-wide text-stone/40">Total price</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={totalPriceVal}
+              onChange={(e) => setTotalPriceVal(e.target.value)}
+              placeholder="0"
+              className="w-full rounded-sm bg-transparent px-0.5 -mx-0.5 text-xs text-muted placeholder:text-stone/40 hover:bg-stone/10 focus:bg-stone/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/25"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
           <div>
             <span className="block text-[10px] uppercase tracking-wide text-stone/40">Rating</span>
             <input
@@ -232,7 +248,7 @@ export default function AccommodationCard({ accommodation, currency, voters, una
 
   return (
     <div className="group flex snap-start flex-col">
-      <div className="relative overflow-hidden rounded-[5px]">
+      <div className={`relative overflow-hidden rounded-[5px] ${selected ? "ring-1 ring-forest/40" : ""}`}>
         {imgSrc ? (
           <img
             src={imgSrc}
@@ -256,6 +272,17 @@ export default function AccommodationCard({ accommodation, currency, voters, una
           </button>
           {showMenu && (
             <div className="absolute right-0 top-full z-10 mt-1 min-w-[8.5rem] space-y-1 rounded-[4px] border border-border bg-background px-2 py-1.5 shadow-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectStay();
+                  setShowMenu(false);
+                }}
+                className="block w-full text-left text-xs font-medium text-forest transition-colors hover:text-forest/80"
+              >
+                {selected ? "Deselect stay" : "Select stay"}
+              </button>
+              <div className="my-1 border-t border-border" />
               <button
                 type="button"
                 onClick={() => {
@@ -306,14 +333,24 @@ export default function AccommodationCard({ accommodation, currency, voters, una
         )}
       </div>
 
-      {unanimous && (
-        <p className="mt-2 flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-rust">
-          <span aria-hidden>★</span>
-          Everyone&rsquo;s pick
-        </p>
+      {(unanimous || selected) && (
+        <div className="mt-2 space-y-0.5">
+          {unanimous && (
+            <p className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-rust">
+              <span aria-hidden>★</span>
+              Everyone&rsquo;s pick
+            </p>
+          )}
+          {selected && (
+            <p className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-forest">
+              <span aria-hidden>✓</span>
+              Selected stay
+            </p>
+          )}
+        </div>
       )}
 
-      <h4 className={`font-display text-base font-semibold leading-tight text-foreground truncate ${unanimous ? "mt-1" : "mt-3"}`}>
+      <h4 className={`font-display text-base font-semibold leading-tight text-foreground truncate ${(unanimous || selected) ? "mt-1" : "mt-3"}`}>
         {nameVal}
       </h4>
 
@@ -333,13 +370,13 @@ export default function AccommodationCard({ accommodation, currency, voters, una
 
       <div className="mt-2 flex items-baseline gap-1 font-semibold text-rust">
         <span className="text-xs">{currency}</span>
-        <span className="text-base">{priceVal}</span>
+        <span className="text-base">{pricePerNightVal}</span>
         <span className="text-xs text-stone/60">/ night</span>
       </div>
 
-      {totalPrice && (
+      {totalPriceVal && (
         <div className="mt-1 text-xs text-stone/60">
-          {currency}{totalPrice} total
+          {currency}{totalPriceVal} total
         </div>
       )}
 

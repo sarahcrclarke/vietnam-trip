@@ -1,5 +1,7 @@
 "use client";
 
+import { accommodationTotalPrice } from "@/lib/accommodation";
+
 const COST_RE = /^\d*\.?\d{0,2}$/;
 
 const num = (v) => {
@@ -21,6 +23,14 @@ function formatMoney(n) {
 export default function CostSummary({ stops, extraCosts, onExtraCostsChange, travellers, currency }) {
   const destinationTotal = stops.reduce((sum, s) => sum + num(s.cost), 0);
 
+  // Accommodation options are shortlists — only the ONE selected stay per
+  // destination (if any) contributes to the trip total, using the same
+  // totalPrice each AccommodationCard already displays.
+  const accommodationTotal = stops.reduce((sum, s) => {
+    const selected = (s.accommodations || []).find((a) => a.id === s.selectedAccommodationId);
+    return sum + (selected ? accommodationTotalPrice(selected) : 0);
+  }, 0);
+
   const transportTotal = stops.reduce(
     (sum, s) => sum + s.journey.filter((item) => item.type === "leg").reduce((a, leg) => a + num(leg.cost), 0),
     0
@@ -33,7 +43,7 @@ export default function CostSummary({ stops, extraCosts, onExtraCostsChange, tra
 
   const extrasTotal = extraCosts.reduce((sum, e) => sum + num(e.amount), 0);
 
-  const grandTotal = destinationTotal + transportTotal + activityTotal + extrasTotal;
+  const grandTotal = destinationTotal + accommodationTotal + transportTotal + activityTotal + extrasTotal;
 
   const includedCount = travellers.filter((t) => t.included).length;
   const perPerson = includedCount > 0 ? grandTotal / includedCount : null;
@@ -80,6 +90,12 @@ export default function CostSummary({ stops, extraCosts, onExtraCostsChange, tra
             <dt className="uppercase tracking-wide text-stone/60">Destinations</dt>
             <dd className="text-foreground font-medium">
               {currency}{formatMoney(destinationTotal)}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-4 pb-2">
+            <dt className="uppercase tracking-wide text-stone/60">Accommodation</dt>
+            <dd className="text-foreground font-medium">
+              {currency}{formatMoney(accommodationTotal)}
             </dd>
           </div>
           <div className="flex items-baseline justify-between gap-4 pb-2">
