@@ -3,15 +3,17 @@
 import { useEffect, useRef } from "react";
 import { CloseIcon } from "./icons";
 
+// `tab` is the value passed to onTabChange for the two wired items;
+// `null` means the item stays inert, same as before.
 const NAV_ITEMS = [
-  { label: "ITINERARY", href: "#itinerary" },
-  { label: "MAP", href: "#map" },
-  { label: "VOTES", href: "#votes" },
-  { label: "PHOTOS", href: "#photos" },
-  { label: "INFO", href: "#info" },
+  { label: "ITINERARY", tab: "itinerary" },
+  { label: "MAP", tab: null },
+  { label: "VOTES", tab: "votes" },
+  { label: "PHOTOS", tab: null },
+  { label: "INFO", tab: null },
 ];
 
-export default function MobileNav({ open, onClose }) {
+export default function MobileNav({ open, onClose, activeTab, onTabChange }) {
   const panelRef = useRef(null);
 
   useEffect(() => {
@@ -66,10 +68,12 @@ export default function MobileNav({ open, onClose }) {
               <button
                 key={item.label}
                 onClick={() => {
+                  if (item.tab) onTabChange(item.tab);
                   onClose();
-                  // TODO: Navigate to section
                 }}
-                className="block w-full text-left px-4 py-3 font-sans text-sm text-forest border-b border-border/40 transition-colors hover:bg-stone/[0.03]"
+                className={`block w-full text-left px-4 py-3 font-sans text-sm text-forest border-b border-border/40 transition-colors hover:bg-stone/[0.03] ${
+                  item.tab && activeTab === item.tab ? "font-semibold" : ""
+                }`}
               >
                 {item.label}
               </button>

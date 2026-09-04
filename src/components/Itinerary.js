@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Journey, { transitToJourney } from "./Journey";
 import StopPanel from "./StopPanel";
 import CostSummary from "./CostSummary";
+import VotesPanel from "./VotesPanel";
 import { daysBetween, formatDuration } from "@/lib/duration";
 import { migrateVotes } from "@/lib/voting";
 import { migrateAccommodation } from "@/lib/accommodation";
@@ -24,7 +25,7 @@ import { migrateAccommodation } from "@/lib/accommodation";
 // the summary can never drift out of sync with the editing UI. Everything
 // else (name, description, tag, photo, activity name/link/image/travel time)
 // stays local to its own component, unchanged.
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange }) {
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary" }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -185,6 +186,76 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
     (id, selectedAccommodationId) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, selectedAccommodationId } : s))),
     []
   );
+
+  // Vote/select actions reachable from the Votes page — same `setStops`,
+  // same mutation shape as ActivityGrid.toggleVote /
+  // AccommodationSection.handleToggleVote / handleSelectStay use for the
+  // itinerary view, so both views always read and write the one shared
+  // `stops` state. No separate voting model, no copied data.
+  const toggleActivityVote = useCallback(
+    (stopId, activityId, travellerId) =>
+      setStops((prev) =>
+        prev.map((s) =>
+          s.id !== stopId
+            ? s
+            : {
+                ...s,
+                activities: s.activities.map((a) =>
+                  a.id === activityId
+                    ? { ...a, votes: { ...a.votes, [travellerId]: !a.votes[travellerId] } }
+                    : a
+                ),
+              }
+        )
+      ),
+    []
+  );
+
+  const toggleAccommodationVote = useCallback(
+    (stopId, accommodationId, travellerId) =>
+      setStops((prev) =>
+        prev.map((s) =>
+          s.id !== stopId
+            ? s
+            : {
+                ...s,
+                accommodations: s.accommodations.map((a) =>
+                  a.id === accommodationId
+                    ? { ...a, votes: { ...a.votes, [travellerId]: !a.votes[travellerId] } }
+                    : a
+                ),
+              }
+        )
+      ),
+    []
+  );
+
+  const selectAccommodation = useCallback(
+    (stopId, accommodationId) =>
+      setStops((prev) =>
+        prev.map((s) =>
+          s.id !== stopId
+            ? s
+            : { ...s, selectedAccommodationId: s.selectedAccommodationId === accommodationId ? null : accommodationId }
+        )
+      ),
+    []
+  );
+
+  if (view === "votes") {
+    return (
+      <div className="flex flex-col">
+        <VotesPanel
+          stops={stops}
+          travellers={travellers}
+          currency={currency}
+          onToggleActivityVote={toggleActivityVote}
+          onToggleAccommodationVote={toggleAccommodationVote}
+          onSelectAccommodation={selectAccommodation}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">

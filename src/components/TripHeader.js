@@ -23,6 +23,8 @@ export default function TripHeader({
   onReturnChange,
   travellers,
   onTravellersChange,
+  activeTab,
+  onTabChange,
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [editingCount, setEditingCount] = useState(false);
@@ -89,55 +91,81 @@ export default function TripHeader({
   return (
     <header className="border-b border-border">
       {/* Top navigation bar */}
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:gap-6 sm:px-6">
-        {/* Wordmark — VIETNAM on all sizes */}
-        <span className="font-display text-sm font-bold tracking-wide text-forest flex-none">
-          VIETNAM
-        </span>
-
-        {/* Desktop navigation (hidden on mobile) */}
-        <div className="hidden md:flex gap-6 flex-1">
-          <button className="font-sans text-sm text-forest transition-opacity hover:opacity-70">
-            ITINERARY
-          </button>
-          <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
-            MAP
-          </button>
-          <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
-            VOTES
-          </button>
-          <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
-            PHOTOS
-          </button>
-          <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
-            INFO
-          </button>
-        </div>
-
-        {/* Right controls: traveller avatars and mobile hamburger */}
-        <div className="flex items-center gap-3 sm:gap-4 flex-none">
-          {/* Traveller avatars (responsive via TravellerAvatars) */}
-          <TravellerAvatars
-            travellers={travellers}
-            onChange={onTravellersChange}
-            compact={true}
-          />
-
-          {/* Mobile hamburger menu (hidden on md and up) */}
+      <nav className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
+        {/* Mobile row — hamburger left, wordmark genuinely centred (via
+            absolute positioning, so it stays centred regardless of the
+            hamburger/avatars' differing widths), avatars right. */}
+        <div className="relative flex items-center justify-between gap-4 md:hidden">
           <button
             type="button"
             onClick={() => setMobileNavOpen(true)}
             aria-label="Open menu"
             aria-expanded={mobileNavOpen}
-            className="md:hidden text-stone/50 transition-colors hover:text-forest"
+            className="text-stone/50 transition-colors hover:text-forest"
           >
             <MenuIcon className="h-5 w-5" />
           </button>
+          <span className="absolute left-1/2 -translate-x-1/2 font-display text-sm font-bold tracking-wide text-forest">
+            VIETNAM
+          </span>
+          <TravellerAvatars
+            travellers={travellers}
+            onChange={onTravellersChange}
+            compact={true}
+          />
+        </div>
+
+        {/* Desktop row — wordmark, nav links, traveller avatars */}
+        <div className="hidden md:flex items-center justify-between gap-6">
+          <span className="font-display text-sm font-bold tracking-wide text-forest flex-none">
+            VIETNAM
+          </span>
+
+          <div className="flex flex-1 gap-6">
+            <button
+              type="button"
+              onClick={() => onTabChange("itinerary")}
+              className={`font-sans text-sm transition-colors ${
+                activeTab === "itinerary" ? "text-forest" : "text-muted hover:text-forest"
+              }`}
+            >
+              ITINERARY
+            </button>
+            <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
+              MAP
+            </button>
+            <button
+              type="button"
+              onClick={() => onTabChange("votes")}
+              className={`font-sans text-sm transition-colors ${
+                activeTab === "votes" ? "text-forest" : "text-muted hover:text-forest"
+              }`}
+            >
+              VOTES
+            </button>
+            <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
+              PHOTOS
+            </button>
+            <button className="font-sans text-sm text-muted transition-colors hover:text-forest">
+              INFO
+            </button>
+          </div>
+
+          <TravellerAvatars
+            travellers={travellers}
+            onChange={onTravellersChange}
+            compact={true}
+          />
         </div>
       </nav>
 
       {/* Mobile navigation panel */}
-      <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <MobileNav
+        open={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+      />
 
       {/* Header content */}
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 text-center">

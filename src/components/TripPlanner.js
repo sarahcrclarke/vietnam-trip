@@ -23,6 +23,9 @@ export default function TripPlanner({ itinerary }) {
       amount: e.cost ? String(e.cost) : "",
     }))
   );
+  // Top-nav section — only ITINERARY and VOTES are wired up; MAP/PHOTOS/INFO
+  // stay inert. Kept here (not in Itinerary) since it also drives TripHeader.
+  const [activeTab, setActiveTab] = useState("itinerary");
 
   return (
     <>
@@ -34,6 +37,8 @@ export default function TripPlanner({ itinerary }) {
         onReturnChange={setReturnDate}
         travellers={travellers}
         onTravellersChange={setTravellers}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
       <Itinerary
         itinerary={itinerary}
@@ -41,6 +46,7 @@ export default function TripPlanner({ itinerary }) {
         travellers={travellers}
         extraCosts={extraCosts}
         onExtraCostsChange={setExtraCosts}
+        view={activeTab}
       />
     </>
   );
