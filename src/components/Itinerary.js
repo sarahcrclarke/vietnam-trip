@@ -40,19 +40,19 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   // shape into a binary shape keyed by stable traveller id.
   const [stops, setStops] = useState(() =>
     itinerary.days.map((d) => {
-      const { transit, activities, cost, accommodations, accommodationWishlistUrl, ...rest } = d;
+      const { transit, journey, activities, cost, accommodations, accommodationWishlistUrl, selectedAccommodationId, ...rest } = d;
       return {
         ...rest,
         cost: cost != null ? String(cost) : "",
-        journey: transitToJourney(transit, travellers),
-        activities: activities.map((a) => ({
+        journey: journey ?? transitToJourney(transit, travellers),
+        activities: activities.map(({ voteMap, ...a }) => ({
           ...a,
           cost: a.cost ? String(a.cost) : "",
-          votes: migrateVotes(a.votes),
+          votes: voteMap ?? migrateVotes(a.votes),
         })),
         accommodations: (accommodations || []).map(migrateAccommodation),
         accommodationWishlistUrl: accommodationWishlistUrl || "",
-        selectedAccommodationId: null,
+        selectedAccommodationId: selectedAccommodationId ?? null,
       };
     })
   );

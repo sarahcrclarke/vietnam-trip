@@ -12,10 +12,10 @@ import { INITIAL_TRAVELLERS } from "@/lib/travellers";
 // cost summary rendered at the end of Itinerary reads all three straight
 // from here rather than an independent copy. Client-side only; no
 // persistence, so a refresh restores the JSON/seed values.
-export default function TripPlanner({ itinerary }) {
+export default function TripPlanner({ itinerary, initialTravellers }) {
   const [depart, setDepart] = useState(itinerary.depart ?? "");
   const [returnDate, setReturnDate] = useState(itinerary.return ?? "");
-  const [travellers, setTravellers] = useState(INITIAL_TRAVELLERS);
+  const [travellers, setTravellers] = useState(initialTravellers ?? INITIAL_TRAVELLERS);
   const [extraCosts, setExtraCosts] = useState(() =>
     (itinerary.extraCosts ?? []).map((e) => ({
       id: e.id,
