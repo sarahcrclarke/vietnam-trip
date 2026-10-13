@@ -9,6 +9,7 @@ import MapPanel from "./MapPanel";
 import { daysBetween, formatDuration } from "@/lib/duration";
 import { migrateVotes } from "@/lib/voting";
 import { migrateAccommodation } from "@/lib/accommodation";
+import { isUuid } from "@/lib/tripData";
 
 // List-level client state for the itinerary's stops. Initialised from JSON
 // (each stop keeps its stable JSON `id`; new stops get a temporary id). No
@@ -30,7 +31,11 @@ import { migrateAccommodation } from "@/lib/accommodation";
 // (never independently editable — see DestinationTag). Activity `name`,
 // `link`, `travelTime` and `image` are controlled by ActivityGrid for the
 // same reason; accommodation fields are controlled by AccommodationSection.
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote }) {
+// Accommodation fields written to public.accommodations (image is not — it
+// stays a local fallback until the Storage migration).
+const ACCOMMODATION_SAVED_FIELDS = ["name", "type", "location", "pricePerNight", "totalPrice", "rating", "reviewCount", "link"];
+
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, accommodationWriter }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -211,7 +216,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
     []
   );
 
-  const updateAccommodations = useCallback(
+  const setStopAccommodations = useCallback(
     (id, accommodations) =>
       setStops((prev) =>
         prev.map((s) => {
@@ -225,6 +230,75 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
         })
       ),
     []
+  );
+
+  // Optimistic: apply the change to the shared state at once, then (Supabase
+  // mode, saved stops only) persist whatever card was added, edited or
+  // removed. Only the card's own fields count — vote toggles also pass
+  // through here and must not write anything. A failed write is undone for
+  // that card alone, with a brief message.
+  const updateAccommodations = useCallback(
+    (id, accommodations) => {
+      const stop = stopsRef.current.find((s) => s.id === id);
+      const before = stop?.accommodations ?? [];
+      setStopAccommodations(id, accommodations);
+      if (!accommodationWriter || !stop || !isUuid(stop.id)) return;
+
+      const fail = (revert) => (err) => {
+        console.error("Accommodation save failed", err);
+        revert();
+        setVoteError("Couldn't save that accommodation change. Please try again.");
+      };
+      const patchCard = (cardId, fields) =>
+        setStops((prev) =>
+          prev.map((s) =>
+            s.id !== id
+              ? s
+              : { ...s, accommodations: s.accommodations.map((a) => (a.id === cardId ? { ...a, ...fields } : a)) }
+          )
+        );
+
+      accommodations.forEach((card, index) => {
+        const old = before.find((a) => a.id === card.id);
+        if (!old) {
+          accommodationWriter.insert(id, card, index).catch(
+            fail(() =>
+              setStops((prev) =>
+                prev.map((s) =>
+                  s.id !== id
+                    ? s
+                    : {
+                        ...s,
+                        accommodations: s.accommodations.filter((a) => a.id !== card.id),
+                        selectedAccommodationId: s.selectedAccommodationId === card.id ? null : s.selectedAccommodationId,
+                      }
+                )
+              )
+            )
+          );
+        } else if (ACCOMMODATION_SAVED_FIELDS.some((k) => old[k] !== card[k])) {
+          const prevFields = Object.fromEntries(ACCOMMODATION_SAVED_FIELDS.map((k) => [k, old[k]]));
+          accommodationWriter.update(card).catch(fail(() => patchCard(card.id, prevFields)));
+        }
+      });
+
+      before.forEach((old, index) => {
+        if (accommodations.some((a) => a.id === old.id)) return;
+        accommodationWriter.remove(old.id).catch(
+          fail(() =>
+            setStops((prev) =>
+              prev.map((s) => {
+                if (s.id !== id || s.accommodations.some((a) => a.id === old.id)) return s;
+                const next = [...s.accommodations];
+                next.splice(Math.min(index, next.length), 0, old);
+                return { ...s, accommodations: next };
+              })
+            )
+          )
+        );
+      });
+    },
+    [accommodationWriter, setStopAccommodations]
   );
 
   const updateAccommodationWishlistUrl = useCallback(

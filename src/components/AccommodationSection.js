@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import AccommodationCard from "./AccommodationCard";
 import { isUnanimous } from "@/lib/voting";
-import { isAirbnbUrl } from "@/lib/accommodation";
+import { isAirbnbUrl, newAccommodationId } from "@/lib/accommodation";
 
 export default function AccommodationSection({ accommodations, accommodationWishlistUrl, selectedAccommodationId, currency, loc, travellers, onAccommodationsChange, onWishlistUrlChange, onSelectedAccommodationChange }) {
   const gridRef = useRef(null);
@@ -15,7 +15,6 @@ export default function AccommodationSection({ accommodations, accommodationWish
   const [addingFromAirbnb, setAddingFromAirbnb] = useState(false);
   const [airbnbUrlVal, setAirbnbUrlVal] = useState("");
   const [airbnbUrlError, setAirbnbUrlError] = useState(null);
-  const seq = useRef(0);
 
   const voters = travellers.filter((t) => t.included && t.voter);
 
@@ -63,8 +62,7 @@ export default function AccommodationSection({ accommodations, accommodationWish
   // "+ Add from Airbnb" create the same accommodation shape via this one
   // path, differing only in which fields they pre-populate.
   const createAccommodation = (overrides = {}) => {
-    seq.current += 1;
-    const id = `accommodation-${Date.now()}-${seq.current}`;
+    const id = newAccommodationId();
     onAccommodationsChange([
       ...accommodations,
       {

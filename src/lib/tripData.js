@@ -185,3 +185,61 @@ export function createActivityVoteWriter(supabase) {
     return next;
   };
 }
+
+// WRITE: accommodation cards (add / edit / remove) in public.accommodations.
+// Only the card's own fields are written — votes, the selected stay, the
+// wishlist URL and images (image_url stays null until the Storage migration)
+// are not. Writes for the same accommodation are chained so an add followed
+// quickly by an edit or remove can't land out of order.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const isUuid = (value) => typeof value === "string" && UUID_RE.test(value);
+
+const num = (v) => (v == null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+
+function toAccommodationColumns(a) {
+  return {
+    name: a.name || "",
+    type: a.type || "",
+    location: a.location || "",
+    price_per_night: num(a.pricePerNight),
+    total_price: num(a.totalPrice),
+    rating: num(a.rating),
+    review_count: num(a.reviewCount),
+    link: a.link || null,
+  };
+}
+
+export function createAccommodationWriter(supabase) {
+  const chains = new Map();
+  const queue = (id, run) => {
+    const next = (chains.get(id) ?? Promise.resolve()).catch(() => {}).then(run);
+    chains.set(id, next);
+    return next;
+  };
+  return {
+    insert: (stopId, accommodation, sortOrder) =>
+      queue(accommodation.id, async () => {
+        const { error } = await supabase.from("accommodations").insert({
+          id: accommodation.id,
+          stop_id: stopId,
+          ...toAccommodationColumns(accommodation),
+          source: accommodation.source || null,
+          sort_order: sortOrder,
+        });
+        if (error) throw error;
+      }),
+    update: (accommodation) =>
+      queue(accommodation.id, async () => {
+        const { error } = await supabase
+          .from("accommodations")
+          .update(toAccommodationColumns(accommodation))
+          .eq("id", accommodation.id);
+        if (error) throw error;
+      }),
+    remove: (id) =>
+      queue(id, async () => {
+        const { error } = await supabase.from("accommodations").delete().eq("id", id);
+        if (error) throw error;
+      }),
+  };
+}

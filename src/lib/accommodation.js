@@ -38,3 +38,15 @@ export function isAirbnbUrl(value) {
     return false;
   }
 }
+
+// Real UUID so a new accommodation has the same id in the UI and in the
+// database (accommodations.id is a uuid).
+export function newAccommodationId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = Math.floor(Math.random() * 16);
+    return (c === "x" ? r : (r & 3) | 8).toString(16);
+  });
+}

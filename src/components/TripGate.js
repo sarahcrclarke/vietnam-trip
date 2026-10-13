@@ -8,6 +8,7 @@ import {
   buildTravellersFromRows,
   checkMembership,
   createActivityVoteWriter,
+  createAccommodationWriter,
   fetchTripRows,
   joinTrip,
 } from "@/lib/tripData";
@@ -39,6 +40,7 @@ export default function TripGate({ localItinerary }) {
       itinerary: buildItineraryFromRows(rows, localItinerary),
       travellers: buildTravellersFromRows(rows),
       persistActivityVote: createActivityVoteWriter(supabase),
+      accommodationWriter: createAccommodationWriter(supabase),
     });
     setStatus("ready");
   };
@@ -94,6 +96,7 @@ export default function TripGate({ localItinerary }) {
         itinerary={trip.itinerary}
         initialTravellers={trip.travellers}
         onPersistActivityVote={trip.persistActivityVote}
+        accommodationWriter={trip.accommodationWriter}
       />
     );
   }

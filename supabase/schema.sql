@@ -630,6 +630,13 @@ to authenticated;
 -- still applies to every write (membership required).
 grant insert, delete on public.activity_votes to authenticated;
 
+-- Accommodation cards (add / edit / remove) are the second thing the app
+-- writes. Only the accommodations table is opened up — not accommodation_votes,
+-- stops or anything else — and nothing is granted to anon/public. The
+-- "trip members full access" policy on accommodations still applies to every
+-- write (membership required).
+grant insert, update, delete on public.accommodations to authenticated;
+
 
 -- ----------------------------------------------------------------------------
 -- 6. Storage — trip photos bucket
