@@ -358,7 +358,12 @@ create or replace function public.join_trip(trip_code text)
 returns void
 language plpgsql
 security definer
-set search_path = public
+-- `extensions` is required: on Supabase, pgcrypto's crypt()/gen_salt() live in
+-- the `extensions` schema, not `public`. With search_path = public alone,
+-- crypt() fails to resolve here (42883) even though it works in the SQL
+-- Editor, whose own search_path includes `extensions`. Both schemas are
+-- fixed, owner-controlled ones, so this does not reopen search_path hijacking.
+set search_path = public, extensions
 as $$
 declare
   v_trip_id uuid;
@@ -593,6 +598,30 @@ create policy "trip members full access" on public.extra_costs
   for all to authenticated
   using (public.is_trip_member(trip_id))
   with check (public.is_trip_member(trip_id));
+
+-- Table-level privileges. RLS policies only FILTER rows for a role that
+-- already has the underlying privilege; without a GRANT, Postgres refuses
+-- the query outright (42501 "permission denied for table ...") before RLS is
+-- ever consulted. Some Supabase projects don't auto-grant on new public
+-- tables, so grant explicitly. SELECT only, to `authenticated` only (anonymous
+-- Supabase sessions operate as `authenticated`) — nothing to anon/public.
+-- Rows stay protected by the RLS policies above (membership required).
+-- trip_invite_codes is deliberately NOT granted to anyone: only join_trip()
+-- (SECURITY DEFINER) ever touches it.
+-- Write privileges (INSERT/UPDATE/DELETE) are intentionally not granted yet;
+-- add them in the same way when the app starts saving.
+grant select on
+  public.trip_access,
+  public.trips,
+  public.travellers,
+  public.stops,
+  public.journey_items,
+  public.activities,
+  public.activity_votes,
+  public.accommodations,
+  public.accommodation_votes,
+  public.extra_costs
+to authenticated;
 
 
 -- ----------------------------------------------------------------------------
