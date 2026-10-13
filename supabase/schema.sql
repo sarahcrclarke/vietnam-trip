@@ -623,6 +623,13 @@ grant select on
   public.extra_costs
 to authenticated;
 
+-- Activity voting is the first thing the app writes. A vote is a row that is
+-- inserted (vote) or deleted (un-vote), never edited, so only INSERT and
+-- DELETE are granted — no UPDATE, nothing for anon/public, and no write access
+-- on any other table. The "trip members full access" policy on activity_votes
+-- still applies to every write (membership required).
+grant insert, delete on public.activity_votes to authenticated;
+
 
 -- ----------------------------------------------------------------------------
 -- 6. Storage — trip photos bucket

@@ -15,7 +15,7 @@ import { isUnanimous } from "@/lib/voting";
 // mobile, continuing sideways into a horizontally-scrollable track.
 
 const ActivityGrid = forwardRef(function ActivityGrid(
-  { activities, onChange, currency, loc, travellers, renderControls },
+  { activities, onChange, onVoteToggle, currency, loc, travellers, renderControls },
   ref
 ) {
   const seq = useRef(0);
@@ -40,14 +40,9 @@ const ActivityGrid = forwardRef(function ActivityGrid(
 
   const removeActivity = (id) => onChange(activities.filter((a) => a.id !== id));
 
-  const toggleVote = (activityId, travellerId) =>
-    onChange(
-      activities.map((a) =>
-        a.id === activityId
-          ? { ...a, votes: { ...a.votes, [travellerId]: !a.votes[travellerId] } }
-          : a
-      )
-    );
+  // Votes go through Itinerary's single handler (shared with the Votes page),
+  // which updates state optimistically and persists the change.
+  const toggleVote = (activityId, travellerId) => onVoteToggle(activityId, travellerId);
 
   const updateCost = (activityId, cost) =>
     onChange(activities.map((a) => (a.id === activityId ? { ...a, cost } : a)));

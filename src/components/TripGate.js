@@ -7,6 +7,7 @@ import {
   buildItineraryFromRows,
   buildTravellersFromRows,
   checkMembership,
+  createActivityVoteWriter,
   fetchTripRows,
   joinTrip,
 } from "@/lib/tripData";
@@ -37,6 +38,7 @@ export default function TripGate({ localItinerary }) {
     setTrip({
       itinerary: buildItineraryFromRows(rows, localItinerary),
       travellers: buildTravellersFromRows(rows),
+      persistActivityVote: createActivityVoteWriter(supabase),
     });
     setStatus("ready");
   };
@@ -87,7 +89,13 @@ export default function TripGate({ localItinerary }) {
   if (status === "local") return <TripPlanner itinerary={localItinerary} />;
 
   if (status === "ready" && trip) {
-    return <TripPlanner itinerary={trip.itinerary} initialTravellers={trip.travellers} />;
+    return (
+      <TripPlanner
+        itinerary={trip.itinerary}
+        initialTravellers={trip.travellers}
+        onPersistActivityVote={trip.persistActivityVote}
+      />
+    );
   }
 
   if (status === "gate") {

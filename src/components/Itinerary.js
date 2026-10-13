@@ -30,7 +30,7 @@ import { migrateAccommodation } from "@/lib/accommodation";
 // (never independently editable — see DestinationTag). Activity `name`,
 // `link`, `travelTime` and `image` are controlled by ActivityGrid for the
 // same reason; accommodation fields are controlled by AccommodationSection.
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled }) {
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -57,6 +57,24 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
     })
   );
   const [draggingId, setDraggingId] = useState(null);
+  const [voteError, setVoteError] = useState(null);
+  const stopsRef = useRef(stops);
+  useEffect(() => {
+    stopsRef.current = stops;
+  }, [stops]);
+  useEffect(() => {
+    if (!voteError) return undefined;
+    const t = setTimeout(() => setVoteError(null), 4000);
+    return () => clearTimeout(t);
+  }, [voteError]);
+  const voteToast = voteError ? (
+    <p
+      role="alert"
+      className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-[4px] border border-border bg-background px-3 py-2 font-sans text-xs text-rust shadow-sm"
+    >
+      {voteError}
+    </p>
+  ) : null;
   const seq = useRef(0);
   const rowRefs = useRef(new Map());
   const dragIdRef = useRef(null);
@@ -224,8 +242,8 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   // AccommodationSection.handleToggleVote / handleSelectStay use for the
   // itinerary view, so both views always read and write the one shared
   // `stops` state. No separate voting model, no copied data.
-  const toggleActivityVote = useCallback(
-    (stopId, activityId, travellerId) =>
+  const setActivityVote = useCallback(
+    (stopId, activityId, travellerId, selected) =>
       setStops((prev) =>
         prev.map((s) =>
           s.id !== stopId
@@ -233,14 +251,31 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
             : {
                 ...s,
                 activities: s.activities.map((a) =>
-                  a.id === activityId
-                    ? { ...a, votes: { ...a.votes, [travellerId]: !a.votes[travellerId] } }
-                    : a
+                  a.id === activityId ? { ...a, votes: { ...a.votes, [travellerId]: selected } } : a
                 ),
               }
         )
       ),
     []
+  );
+
+  // Optimistic: flip the vote in the UI at once, then persist (Supabase mode
+  // only). If the write fails, put the vote back and show a brief message.
+  const toggleActivityVote = useCallback(
+    (stopId, activityId, travellerId) => {
+      const activity = stopsRef.current
+        .find((s) => s.id === stopId)
+        ?.activities.find((a) => a.id === activityId);
+      if (!activity) return;
+      const next = !activity.votes[travellerId];
+      setActivityVote(stopId, activityId, travellerId, next);
+      if (!onPersistActivityVote) return;
+      onPersistActivityVote(activityId, travellerId, next).catch(() => {
+        setActivityVote(stopId, activityId, travellerId, !next);
+        setVoteError("Couldn't save that vote. Please try again.");
+      });
+    },
+    [onPersistActivityVote, setActivityVote]
   );
 
   const toggleAccommodationVote = useCallback(
@@ -277,6 +312,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   if (view === "votes") {
     return (
       <div className="flex flex-col">
+        {voteToast}
         <VotesPanel
           stops={stops}
           travellers={travellers}
@@ -292,6 +328,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   if (view === "map") {
     return (
       <div className="flex flex-col">
+        {voteToast}
         <MapPanel stops={stops} tripReturnDate={tripReturnDate} onViewChange={onViewChange} />
       </div>
     );
@@ -299,6 +336,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
 
   return (
     <div className="flex flex-col">
+      {voteToast}
       {stops.length === 0 ? (
         <div className="mx-auto max-w-editorial flex-1 px-4 py-16 text-center font-sans text-sm text-stone/50 sm:px-6">
           No stops yet — add one to begin.
@@ -331,6 +369,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onDateChange={updateDate}
                   onCostChange={(cost) => updateCost(stop.id, cost)}
                   onActivitiesChange={(activities) => updateActivities(stop.id, activities)}
+                  onActivityVoteToggle={(activityId, travellerId) => toggleActivityVote(stop.id, activityId, travellerId)}
                   onAccommodationsChange={(accommodations) => updateAccommodations(stop.id, accommodations)}
                   onAccommodationWishlistUrlChange={(url) => updateAccommodationWishlistUrl(stop.id, url)}
                   onSelectedAccommodationChange={(selectedId) => updateSelectedAccommodation(stop.id, selectedId)}

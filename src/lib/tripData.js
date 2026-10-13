@@ -157,3 +157,31 @@ export function buildTravellersFromRows(rows) {
     included: t.included,
   }));
 }
+
+// WRITE: the only trip content persisted so far — activity votes. One row per
+// (activity, traveller); present = voted. Writes for the same pair are chained
+// so a quick vote/un-vote can't land out of order.
+export function createActivityVoteWriter(supabase) {
+  const chains = new Map();
+  return (activityId, travellerId, selected) => {
+    const key = `${activityId}:${travellerId}`;
+    const run = async () => {
+      if (selected) {
+        const { error } = await supabase
+          .from("activity_votes")
+          .insert({ activity_id: activityId, traveller_id: travellerId });
+        if (error && error.code !== "23505") throw error; // already voted = fine
+      } else {
+        const { error } = await supabase
+          .from("activity_votes")
+          .delete()
+          .eq("activity_id", activityId)
+          .eq("traveller_id", travellerId);
+        if (error) throw error;
+      }
+    };
+    const next = (chains.get(key) ?? Promise.resolve()).catch(() => {}).then(run);
+    chains.set(key, next);
+    return next;
+  };
+}
