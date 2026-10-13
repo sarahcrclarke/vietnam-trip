@@ -5,7 +5,7 @@ import AccommodationCard from "./AccommodationCard";
 import { isUnanimous } from "@/lib/voting";
 import { isAirbnbUrl, newAccommodationId } from "@/lib/accommodation";
 
-export default function AccommodationSection({ accommodations, accommodationWishlistUrl, selectedAccommodationId, currency, loc, travellers, onAccommodationsChange, onWishlistUrlChange, onSelectedAccommodationChange }) {
+export default function AccommodationSection({ accommodations, accommodationWishlistUrl, selectedAccommodationId, currency, loc, travellers, nights, onAccommodationsChange, onWishlistUrlChange, onSelectedAccommodationChange }) {
   const gridRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -17,6 +17,7 @@ export default function AccommodationSection({ accommodations, accommodationWish
   const [airbnbUrlError, setAirbnbUrlError] = useState(null);
 
   const voters = travellers.filter((t) => t.included && t.voter);
+  const includedCount = travellers.filter((t) => t.included).length;
 
   useEffect(() => {
     const updateScrollState = () => {
@@ -276,6 +277,8 @@ export default function AccommodationSection({ accommodations, accommodationWish
                     accommodation={accommodation}
                     currency={currency}
                     voters={voters}
+                    nights={nights}
+                    includedCount={includedCount}
                     unanimous={isUnanimous(accommodation.votes, voters)}
                     selected={accommodation.id === selectedAccommodationId}
                     startEditing={accommodation.id === newlyAddedId}

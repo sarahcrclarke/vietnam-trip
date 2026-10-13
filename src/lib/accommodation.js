@@ -50,3 +50,47 @@ export function newAccommodationId() {
     return (c === "x" ? r : (r & 3) | 8).toString(16);
   });
 }
+
+// --- Price calculation ------------------------------------------------------
+// Nights for a stop = its own date through the NEXT stop's date (or the trip
+// return date for the final stop) — the same date span the stop's duration
+// label is derived from. Arrive on the 1st, next stop on the 4th = 3 nights.
+// Returns null when the dates are missing/invalid or the span isn't positive.
+export function accommodationNights(daysBetweenResult) {
+  return Number.isInteger(daysBetweenResult) && daysBetweenResult > 0 ? daysBetweenResult : null;
+}
+
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
+// Whole amounts show without decimals; anything with pence shows 2 places.
+export function formatMoney(n) {
+  const rounded = round2(n);
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+}
+
+const parseAmount = (value) => {
+  if (value == null || String(value).trim() === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
+
+// total / nights -> per-night string, or null if it can't be derived.
+export function derivePricePerNight(total, nights) {
+  const t = parseAmount(total);
+  if (t == null || !nights) return null;
+  return formatMoney(t / nights);
+}
+
+// per-night x nights -> total string, or null if it can't be derived.
+export function deriveTotalPrice(pricePerNight, nights) {
+  const p = parseAmount(pricePerNight);
+  if (p == null || !nights) return null;
+  return formatMoney(p * nights);
+}
+
+// total / included travellers (one flat split — no adult/child pricing).
+export function pricePerPerson(total, travellerCount) {
+  const t = parseAmount(total);
+  if (t == null || t === 0 || !travellerCount) return null;
+  return formatMoney(t / travellerCount);
+}

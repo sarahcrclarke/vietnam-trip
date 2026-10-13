@@ -9,6 +9,7 @@ import MapPanel from "./MapPanel";
 import { daysBetween, formatDuration } from "@/lib/duration";
 import { migrateVotes } from "@/lib/voting";
 import { migrateAccommodation } from "@/lib/accommodation";
+import { accommodationNights } from "@/lib/accommodation";
 import { isUuid } from "@/lib/tripData";
 
 // List-level client state for the itinerary's stops. Initialised from JSON
@@ -419,7 +420,8 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
         <div className="space-y-0">
           {stops.map((stop, index) => {
             const nextDate = index + 1 < stops.length ? stops[index + 1].date : tripReturnDate;
-            const duration = formatDuration(daysBetween(stop.date, nextDate));
+            const stayDays = daysBetween(stop.date, nextDate);
+            const duration = formatDuration(stayDays);
             return (
               <div key={stop.id} ref={setRow(stop.id)}>
                 <Journey
@@ -448,6 +450,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onAccommodationWishlistUrlChange={(url) => updateAccommodationWishlistUrl(stop.id, url)}
                   onSelectedAccommodationChange={(selectedId) => updateSelectedAccommodation(stop.id, selectedId)}
                   duration={duration}
+                  nights={accommodationNights(stayDays)}
                   travellers={travellers}
                 />
               </div>

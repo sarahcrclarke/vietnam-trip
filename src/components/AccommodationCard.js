@@ -3,8 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { CameraIcon } from "./icons";
 import AccommodationVotes from "./AccommodationVotes";
+import { derivePricePerNight, deriveTotalPrice, pricePerPerson, formatMoney } from "@/lib/accommodation";
 
-export default function AccommodationCard({ accommodation, currency, voters, unanimous, selected, startEditing, onToggleVote, onSelectStay, onEdit, onRemove }) {
+const displayMoney = (v) => (Number.isFinite(Number(v)) ? formatMoney(Number(v)) : v);
+
+export default function AccommodationCard({ accommodation, currency, voters, unanimous, selected, nights, includedCount, startEditing, onToggleVote, onSelectStay, onEdit, onRemove }) {
   const { name, type, location, image, pricePerNight, totalPrice, rating, reviewCount, link } = accommodation;
   const [editing, setEditing] = useState(Boolean(startEditing));
   const [showMenu, setShowMenu] = useState(false);
@@ -66,14 +69,37 @@ export default function AccommodationCard({ accommodation, currency, voters, una
     setImgSrc(null);
   };
 
+  // Whichever of the two prices is being edited is the source of truth; the
+  // other is recalculated from it using the stop's nights (when known).
+  const handlePricePerNightChange = (value) => {
+    setPricePerNightVal(value);
+    const derived = deriveTotalPrice(value, nights);
+    if (derived != null) setTotalPriceVal(derived);
+  };
+
+  const handleTotalPriceChange = (value) => {
+    setTotalPriceVal(value);
+    const derived = derivePricePerNight(value, nights);
+    if (derived != null) setPricePerNightVal(derived);
+  };
+
   const handleSave = () => {
+    // A card with only one price (e.g. saved before this calculation
+    // existed) gets the missing one filled in; if both are present, neither
+    // is touched.
+    let nightlyOut = pricePerNightVal;
+    let totalOut = totalPriceVal;
+    if (!nightlyOut && totalOut) nightlyOut = derivePricePerNight(totalOut, nights) ?? "";
+    else if (!totalOut && nightlyOut) totalOut = deriveTotalPrice(nightlyOut, nights) ?? "";
+    setPricePerNightVal(nightlyOut);
+    setTotalPriceVal(totalOut);
     onEdit({
       id: accommodation.id,
       name: nameVal,
       type: typeVal,
       location: locationVal,
-      pricePerNight: pricePerNightVal ? parseFloat(pricePerNightVal) : null,
-      totalPrice: totalPriceVal ? parseFloat(totalPriceVal) : null,
+      pricePerNight: nightlyOut ? parseFloat(nightlyOut) : null,
+      totalPrice: totalOut ? parseFloat(totalOut) : null,
       rating: ratingVal ? parseFloat(ratingVal) : null,
       reviewCount: reviewCountVal ? parseInt(reviewCountVal) : null,
       link: linkVal,
@@ -175,7 +201,7 @@ export default function AccommodationCard({ accommodation, currency, voters, una
               type="text"
               inputMode="decimal"
               value={pricePerNightVal}
-              onChange={(e) => setPricePerNightVal(e.target.value)}
+              onChange={(e) => handlePricePerNightChange(e.target.value)}
               placeholder="0"
               className="w-full rounded-sm bg-transparent px-0.5 -mx-0.5 text-xs text-muted placeholder:text-stone/40 hover:bg-stone/10 focus:bg-stone/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/25"
             />
@@ -186,7 +212,7 @@ export default function AccommodationCard({ accommodation, currency, voters, una
               type="text"
               inputMode="decimal"
               value={totalPriceVal}
-              onChange={(e) => setTotalPriceVal(e.target.value)}
+              onChange={(e) => handleTotalPriceChange(e.target.value)}
               placeholder="0"
               className="w-full rounded-sm bg-transparent px-0.5 -mx-0.5 text-xs text-muted placeholder:text-stone/40 hover:bg-stone/10 focus:bg-stone/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/25"
             />
@@ -368,15 +394,20 @@ export default function AccommodationCard({ accommodation, currency, voters, una
         </div>
       )}
 
-      <div className="mt-2 flex items-baseline gap-1 font-semibold text-rust">
-        <span className="text-xs">{currency}</span>
-        <span className="text-base">{pricePerNightVal}</span>
-        <span className="text-xs text-stone/60">/ night</span>
-      </div>
+      {pricePerNightVal && (
+        <div className="mt-2 flex items-baseline gap-1 font-semibold text-rust">
+          <span className="text-xs">{currency}</span>
+          <span className="text-base">{displayMoney(pricePerNightVal)}</span>
+          <span className="text-xs text-stone/60">/ night</span>
+        </div>
+      )}
 
       {totalPriceVal && (
         <div className="mt-1 text-xs text-stone/60">
-          {currency}{totalPriceVal} total
+          {currency}{displayMoney(totalPriceVal)} total
+          {pricePerPerson(totalPriceVal, includedCount) != null && (
+            <> · {currency}{pricePerPerson(totalPriceVal, includedCount)} / person</>
+          )}
         </div>
       )}
 
