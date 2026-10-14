@@ -36,7 +36,16 @@ import { isUuid } from "@/lib/tripData";
 // stays a local fallback until the Storage migration).
 const ACCOMMODATION_SAVED_FIELDS = ["name", "type", "location", "pricePerNight", "totalPrice", "rating", "reviewCount", "link"];
 
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation }) {
+// Stop text fields persisted to public.stops: state key -> [column, value conversion].
+const STOP_FIELD_COLUMNS = {
+  loc: ["loc", (v) => v ?? ""],
+  desc: ["description", (v) => v ?? ""],
+  date: ["date", (v) => v || null],
+  cost: ["cost", (v) => Number(v) || 0],
+  accommodationWishlistUrl: ["accommodation_wishlist_url", (v) => (v ? v : null)],
+};
+
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -182,30 +191,45 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
 
   const removeStop = (id) => setStops((prev) => prev.filter((s) => s.id !== id));
 
-  const updateName = useCallback(
-    (id, loc) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, loc } : s))),
-    []
+  // Stop text fields (name, description, date, cost, wishlist URL) share one
+  // optimistic path. `savedStopFields` holds
+  // each field's last value known to be in the DB, so a failed write rolls
+  // back to that — but only if the field hasn't been edited again since.
+  const savedStopFields = useRef(new Map());
+  const updateStopField = useCallback(
+    (id, key, value) => {
+      const stop = stopsRef.current.find((s) => s.id === id);
+      setStops((prev) => prev.map((s) => (s.id === id ? { ...s, [key]: value } : s)));
+      if (!onPersistStopFields || !stop || !isUuid(id)) return;
+
+      const savedKey = `${id}:${key}`;
+      if (!savedStopFields.current.has(savedKey)) savedStopFields.current.set(savedKey, stop[key]);
+      const [column, convert] = STOP_FIELD_COLUMNS[key];
+      onPersistStopFields(id, { [column]: convert(value) }).then(
+        () => savedStopFields.current.set(savedKey, value),
+        (err) => {
+          console.error("Stop save failed", err);
+          const saved = savedStopFields.current.get(savedKey);
+          setStops((prev) => prev.map((s) => (s.id === id && s[key] === value ? { ...s, [key]: saved } : s)));
+          setVoteError("Couldn't save that change. Please try again.");
+        }
+      );
+    },
+    [onPersistStopFields]
   );
 
-  const updateDescription = useCallback(
-    (id, desc) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, desc } : s))),
-    []
-  );
+  const updateName = useCallback((id, loc) => updateStopField(id, "loc", loc), [updateStopField]);
+
+  const updateDescription = useCallback((id, desc) => updateStopField(id, "desc", desc), [updateStopField]);
 
   const updatePhoto = useCallback(
     (id, photo) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, photo } : s))),
     []
   );
 
-  const updateDate = useCallback(
-    (id, date) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, date } : s))),
-    []
-  );
+  const updateDate = useCallback((id, date) => updateStopField(id, "date", date), [updateStopField]);
 
-  const updateCost = useCallback(
-    (id, cost) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, cost } : s))),
-    []
-  );
+  const updateCost = useCallback((id, cost) => updateStopField(id, "cost", cost), [updateStopField]);
 
   const updateJourney = useCallback(
     (id, journey) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, journey } : s))),
@@ -305,8 +329,8 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   );
 
   const updateAccommodationWishlistUrl = useCallback(
-    (id, accommodationWishlistUrl) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, accommodationWishlistUrl } : s))),
-    []
+    (id, accommodationWishlistUrl) => updateStopField(id, "accommodationWishlistUrl", accommodationWishlistUrl),
+    [updateStopField]
   );
 
   // The ONE path for selecting / deselecting a stay (null = deselect), used by

@@ -298,3 +298,52 @@ export function createSelectedAccommodationWriter(supabase) {
     return next;
   };
 }
+
+// WRITE: a stop's own text fields — loc, description, date, cost and
+// accommodation_wishlist_url (the only stop columns besides the selected stay
+// that the app may update; column-level grant). These inputs fire on every
+// keystroke, so edits are coalesced: save(stopId, columns) merges into one
+// pending patch per stop and writes it after a short pause. Writes for the
+// same stop are chained, so a later patch can never land before an earlier
+// one. save() returns a promise that settles when the batch holding that edit
+// has been written (rejects if it failed).
+export function createStopFieldWriter(supabase, delayMs = 600) {
+  const chains = new Map();
+  const pending = new Map();
+
+  const flush = (stopId) => {
+    const entry = pending.get(stopId);
+    if (!entry) return;
+    pending.delete(stopId);
+    clearTimeout(entry.timer);
+    const run = async () => {
+      const { data, error } = await supabase.from("stops").update(entry.patch).eq("id", stopId).select("id");
+      if (error) throw error;
+      if (!data?.length) throw new Error("Stop not updated"); // RLS filtered it out
+    };
+    const next = (chains.get(stopId) ?? Promise.resolve()).catch(() => {}).then(run);
+    chains.set(stopId, next);
+    next.then(
+      () => entry.waiters.forEach((w) => w.resolve()),
+      (err) => entry.waiters.forEach((w) => w.reject(err))
+    );
+  };
+
+  const flushAll = () => [...pending.keys()].forEach(flush);
+  if (typeof window !== "undefined") {
+    window.addEventListener("pagehide", flushAll);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flushAll();
+    });
+  }
+
+  return (stopId, columns) =>
+    new Promise((resolve, reject) => {
+      const entry = pending.get(stopId) ?? { patch: {}, waiters: [], timer: null };
+      Object.assign(entry.patch, columns);
+      entry.waiters.push({ resolve, reject });
+      clearTimeout(entry.timer);
+      entry.timer = setTimeout(() => flush(stopId), delayMs);
+      pending.set(stopId, entry);
+    });
+}

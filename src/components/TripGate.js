@@ -10,6 +10,7 @@ import {
   createActivityVoteWriter,
   createAccommodationWriter,
   createSelectedAccommodationWriter,
+  createStopFieldWriter,
   createAccommodationVoteWriter,
   fetchTripRows,
   joinTrip,
@@ -53,6 +54,7 @@ export default function TripGate({ localItinerary }) {
           .then(() => writeAccommodationVote(accommodationId, travellerId, selected)),
       // Selecting a stay waits for that card's own add/edit to finish so the
       // row exists before stops.selected_accommodation_id points at it.
+      persistStopFields: createStopFieldWriter(supabase),
       persistSelectedAccommodation: (stopId, accommodationId) =>
         (accommodationId ? accommodationWriter.ready(accommodationId) : Promise.resolve()).then(() =>
           writeSelectedAccommodation(stopId, accommodationId)
@@ -115,6 +117,7 @@ export default function TripGate({ localItinerary }) {
         accommodationWriter={trip.accommodationWriter}
         onPersistAccommodationVote={trip.persistAccommodationVote}
         onPersistSelectedAccommodation={trip.persistSelectedAccommodation}
+        onPersistStopFields={trip.persistStopFields}
       />
     );
   }

@@ -675,6 +675,12 @@ grant insert, delete on public.accommodation_votes to authenticated;
 -- accommodation from a different stop.
 grant update (selected_accommodation_id) on public.stops to authenticated;
 
+-- Stop details (destination name, description, date, cost, and the Airbnb
+-- wishlist URL): the app may also update exactly these five columns, again
+-- column-level. Everything else on stops (trip_id, sort_order, photo_url, ...)
+-- stays read-only, and membership RLS still applies to every write.
+grant update (loc, description, date, cost, accommodation_wishlist_url) on public.stops to authenticated;
+
 
 -- ----------------------------------------------------------------------------
 -- 6. Storage — trip photos bucket
