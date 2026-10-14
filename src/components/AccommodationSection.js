@@ -5,7 +5,7 @@ import AccommodationCard from "./AccommodationCard";
 import { isUnanimous } from "@/lib/voting";
 import { isAirbnbUrl, newAccommodationId } from "@/lib/accommodation";
 
-export default function AccommodationSection({ accommodations, accommodationWishlistUrl, selectedAccommodationId, currency, loc, travellers, nights, onAccommodationsChange, onWishlistUrlChange, onSelectedAccommodationChange }) {
+export default function AccommodationSection({ accommodations, accommodationWishlistUrl, selectedAccommodationId, currency, loc, travellers, nights, onAccommodationsChange, onAccommodationVoteToggle, onWishlistUrlChange, onSelectedAccommodationChange }) {
   const gridRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -49,15 +49,8 @@ export default function AccommodationSection({ accommodations, accommodationWish
     );
   };
 
-  const handleToggleVote = (accommodationId, travellerId) => {
-    onAccommodationsChange(
-      accommodations.map((a) =>
-        a.id === accommodationId
-          ? { ...a, votes: { ...a.votes, [travellerId]: !a.votes[travellerId] } }
-          : a
-      )
-    );
-  };
+  const handleToggleVote = (accommodationId, travellerId) =>
+    onAccommodationVoteToggle(accommodationId, travellerId);
 
   // Shared creation flow — both the generic "+ Add accommodation" button and
   // "+ Add from Airbnb" create the same accommodation shape via this one

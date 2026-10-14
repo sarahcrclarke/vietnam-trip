@@ -9,6 +9,7 @@ import {
   checkMembership,
   createActivityVoteWriter,
   createAccommodationWriter,
+  createAccommodationVoteWriter,
   fetchTripRows,
   joinTrip,
 } from "@/lib/tripData";
@@ -36,11 +37,18 @@ export default function TripGate({ localItinerary }) {
 
   const loadTrip = async (supabase) => {
     const rows = await fetchTripRows(supabase);
+    const accommodationWriter = createAccommodationWriter(supabase);
+    const writeAccommodationVote = createAccommodationVoteWriter(supabase);
     setTrip({
       itinerary: buildItineraryFromRows(rows, localItinerary),
       travellers: buildTravellersFromRows(rows),
       persistActivityVote: createActivityVoteWriter(supabase),
-      accommodationWriter: createAccommodationWriter(supabase),
+      accommodationWriter,
+      // A vote waits for its card's own add/edit to finish so the row exists.
+      persistAccommodationVote: (accommodationId, travellerId, selected) =>
+        accommodationWriter
+          .ready(accommodationId)
+          .then(() => writeAccommodationVote(accommodationId, travellerId, selected)),
     });
     setStatus("ready");
   };
@@ -97,6 +105,7 @@ export default function TripGate({ localItinerary }) {
         initialTravellers={trip.travellers}
         onPersistActivityVote={trip.persistActivityVote}
         accommodationWriter={trip.accommodationWriter}
+        onPersistAccommodationVote={trip.persistAccommodationVote}
       />
     );
   }

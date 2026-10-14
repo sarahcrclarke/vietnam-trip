@@ -637,6 +637,12 @@ grant insert, delete on public.activity_votes to authenticated;
 -- write (membership required).
 grant insert, update, delete on public.accommodations to authenticated;
 
+-- Accommodation votes: like activity votes, a vote is a row that is inserted
+-- (vote) or deleted (un-vote), never edited, so only INSERT and DELETE are
+-- granted — no UPDATE, nothing for anon/public. The "trip members full
+-- access" policy on accommodation_votes still applies to every write.
+grant insert, delete on public.accommodation_votes to authenticated;
+
 
 -- ----------------------------------------------------------------------------
 -- 6. Storage — trip photos bucket

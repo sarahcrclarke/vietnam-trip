@@ -36,7 +36,7 @@ import { isUuid } from "@/lib/tripData";
 // stays a local fallback until the Storage migration).
 const ACCOMMODATION_SAVED_FIELDS = ["name", "type", "location", "pricePerNight", "totalPrice", "rating", "reviewCount", "link"];
 
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, accommodationWriter }) {
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, accommodationWriter, onPersistAccommodationVote }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -353,8 +353,8 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
     [onPersistActivityVote, setActivityVote]
   );
 
-  const toggleAccommodationVote = useCallback(
-    (stopId, accommodationId, travellerId) =>
+  const setAccommodationVote = useCallback(
+    (stopId, accommodationId, travellerId, selected) =>
       setStops((prev) =>
         prev.map((s) =>
           s.id !== stopId
@@ -362,14 +362,30 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
             : {
                 ...s,
                 accommodations: s.accommodations.map((a) =>
-                  a.id === accommodationId
-                    ? { ...a, votes: { ...a.votes, [travellerId]: !a.votes[travellerId] } }
-                    : a
+                  a.id === accommodationId ? { ...a, votes: { ...a.votes, [travellerId]: selected } } : a
                 ),
               }
         )
       ),
     []
+  );
+
+  // Same optimistic pattern as activity votes, used by both the Accommodation
+  // tab and the Votes tab. Cards on unsaved (non-UUID) stops stay local-only.
+  const toggleAccommodationVote = useCallback(
+    (stopId, accommodationId, travellerId) => {
+      const stop = stopsRef.current.find((s) => s.id === stopId);
+      const accommodation = stop?.accommodations.find((a) => a.id === accommodationId);
+      if (!accommodation) return;
+      const next = !accommodation.votes[travellerId];
+      setAccommodationVote(stopId, accommodationId, travellerId, next);
+      if (!onPersistAccommodationVote || !isUuid(stopId)) return;
+      onPersistAccommodationVote(accommodationId, travellerId, next).catch(() => {
+        setAccommodationVote(stopId, accommodationId, travellerId, !next);
+        setVoteError("Couldn't save that vote. Please try again.");
+      });
+    },
+    [onPersistAccommodationVote, setAccommodationVote]
   );
 
   const selectAccommodation = useCallback(
@@ -447,6 +463,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onActivitiesChange={(activities) => updateActivities(stop.id, activities)}
                   onActivityVoteToggle={(activityId, travellerId) => toggleActivityVote(stop.id, activityId, travellerId)}
                   onAccommodationsChange={(accommodations) => updateAccommodations(stop.id, accommodations)}
+                  onAccommodationVoteToggle={(accommodationId, travellerId) => toggleAccommodationVote(stop.id, accommodationId, travellerId)}
                   onAccommodationWishlistUrlChange={(url) => updateAccommodationWishlistUrl(stop.id, url)}
                   onSelectedAccommodationChange={(selectedId) => updateSelectedAccommodation(stop.id, selectedId)}
                   duration={duration}

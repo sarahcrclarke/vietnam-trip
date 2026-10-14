@@ -217,6 +217,9 @@ export function createAccommodationWriter(supabase) {
     return next;
   };
   return {
+    // Resolves once any pending add/edit/remove for this accommodation has
+    // finished (never rejects) — lets a vote wait for its card's row to exist.
+    ready: (id) => (chains.get(id) ?? Promise.resolve()).catch(() => {}),
     insert: (stopId, accommodation, sortOrder) =>
       queue(accommodation.id, async () => {
         const { error } = await supabase.from("accommodations").insert({
@@ -241,5 +244,35 @@ export function createAccommodationWriter(supabase) {
         const { error } = await supabase.from("accommodations").delete().eq("id", id);
         if (error) throw error;
       }),
+  };
+}
+
+// WRITE: accommodation votes — same insert / delete pattern as activity votes,
+// into public.accommodation_votes. One row per (accommodation, traveller);
+// present = voted. The traveller is the pill that was clicked (no auth.uid()
+// mapping). Writes for the same pair are chained so a quick vote/un-vote
+// can't land out of order.
+export function createAccommodationVoteWriter(supabase) {
+  const chains = new Map();
+  return (accommodationId, travellerId, selected) => {
+    const key = `${accommodationId}:${travellerId}`;
+    const run = async () => {
+      if (selected) {
+        const { error } = await supabase
+          .from("accommodation_votes")
+          .insert({ accommodation_id: accommodationId, traveller_id: travellerId });
+        if (error && error.code !== "23505") throw error; // already voted = fine
+      } else {
+        const { error } = await supabase
+          .from("accommodation_votes")
+          .delete()
+          .eq("accommodation_id", accommodationId)
+          .eq("traveller_id", travellerId);
+        if (error) throw error;
+      }
+    };
+    const next = (chains.get(key) ?? Promise.resolve()).catch(() => {}).then(run);
+    chains.set(key, next);
+    return next;
   };
 }
