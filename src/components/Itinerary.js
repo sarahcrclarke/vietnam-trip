@@ -20,7 +20,7 @@ import { isUuid } from "@/lib/tripData";
 // stable ids stay the React keys, so stop components are never remounted and
 // all temporary state inside them is preserved.
 //
-// A stop's `date`, `cost`, `journey`, `activities`, `loc` (name), `desc` and
+// A stop's `date`, `journey`, `activities`, `loc` (name), `desc` and
 // `photo` are all controlled here (not owned locally by their editors) so
 // this is the one shared source of truth every view (MAP, VOTES, Cost
 // Summary) reads from — a destination's duration is derived from its own
@@ -41,7 +41,6 @@ const STOP_FIELD_COLUMNS = {
   loc: ["loc", (v) => v ?? ""],
   desc: ["description", (v) => v ?? ""],
   date: ["date", (v) => v || null],
-  cost: ["cost", (v) => Number(v) || 0],
   accommodationWishlistUrl: ["accommodation_wishlist_url", (v) => (v ? v : null)],
 };
 
@@ -50,15 +49,15 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
   // so no existing transport mode, description or cost is lost. Destination
-  // cost is normalised to a string (matching how the cost input holds it);
+  // cost (stops.cost) is deprecated and dropped here — a destination's total is
+  // calculated (lib/cost.js);
   // activity votes are migrated from the legacy name-keyed true/false/null
   // shape into a binary shape keyed by stable traveller id.
   const [stops, setStops] = useState(() =>
     itinerary.days.map((d) => {
-      const { transit, journey, activities, cost, accommodations, accommodationWishlistUrl, selectedAccommodationId, ...rest } = d;
+      const { transit, journey, activities, cost: _legacyStopCost, accommodations, accommodationWishlistUrl, selectedAccommodationId, ...rest } = d;
       return {
         ...rest,
-        cost: cost != null ? String(cost) : "",
         journey: journey ?? transitToJourney(transit, travellers),
         activities: activities.map(({ voteMap, ...a }) => ({
           ...a,
@@ -185,13 +184,13 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
     const id = `new-stop-${Date.now()}-${seq.current}`;
     setStops((prev) => [
       ...prev,
-      { id, loc: "", date: "", desc: "", tag: "", cost: "0", photo: null, journey: [], activities: [], accommodations: [], accommodationWishlistUrl: "", selectedAccommodationId: null },
+      { id, loc: "", date: "", desc: "", tag: "", photo: null, journey: [], activities: [], accommodations: [], accommodationWishlistUrl: "", selectedAccommodationId: null },
     ]);
   };
 
   const removeStop = (id) => setStops((prev) => prev.filter((s) => s.id !== id));
 
-  // Stop text fields (name, description, date, cost, wishlist URL) share one
+  // Stop text fields (name, description, date, wishlist URL) share one
   // optimistic path. `savedStopFields` holds
   // each field's last value known to be in the DB, so a failed write rolls
   // back to that — but only if the field hasn't been edited again since.
@@ -228,8 +227,6 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   );
 
   const updateDate = useCallback((id, date) => updateStopField(id, "date", date), [updateStopField]);
-
-  const updateCost = useCallback((id, cost) => updateStopField(id, "cost", cost), [updateStopField]);
 
   const updateJourney = useCallback(
     (id, journey) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, journey } : s))),
@@ -505,7 +502,6 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onDescriptionChange={(desc) => updateDescription(stop.id, desc)}
                   onPhotoChange={(photo) => updatePhoto(stop.id, photo)}
                   onDateChange={updateDate}
-                  onCostChange={(cost) => updateCost(stop.id, cost)}
                   onActivitiesChange={(activities) => updateActivities(stop.id, activities)}
                   onActivityVoteToggle={(activityId, travellerId) => toggleActivityVote(stop.id, activityId, travellerId)}
                   onAccommodationsChange={(accommodations) => updateAccommodations(stop.id, accommodations)}

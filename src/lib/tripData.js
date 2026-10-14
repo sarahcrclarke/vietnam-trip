@@ -96,7 +96,6 @@ export function buildItineraryFromRows(rows, localItinerary) {
     date: s.date || "",
     desc: s.description || "",
     tag: "",
-    cost: Number(s.cost),
     photo: s.photo_url || localPhoto(s.loc),
     journey: rows.journey
       .filter((j) => j.stop_id === s.id)
@@ -299,7 +298,7 @@ export function createSelectedAccommodationWriter(supabase) {
   };
 }
 
-// WRITE: a stop's own text fields — loc, description, date, cost and
+// WRITE: a stop's own text fields — loc, description, date and
 // accommodation_wishlist_url (the only stop columns besides the selected stay
 // that the app may update; column-level grant). These inputs fire on every
 // keystroke, so edits are coalesced: save(stopId, columns) merges into one

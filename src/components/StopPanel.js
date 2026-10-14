@@ -8,10 +8,12 @@ import DestinationDate from "./DestinationDate";
 import DestinationDescription from "./DestinationDescription";
 import DestinationTag from "./DestinationTag";
 import DestinationCost from "./DestinationCost";
+import { destinationBreakdown, eligibleVoters } from "@/lib/cost";
 import DestinationPhoto from "./DestinationPhoto";
 import { DragHandleIcon } from "./icons";
 
-export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onNameChange, onDescriptionChange, onPhotoChange, onDateChange, onCostChange, onActivitiesChange, onActivityVoteToggle, onAccommodationsChange, onAccommodationVoteToggle, onAccommodationWishlistUrlChange, onSelectedAccommodationChange, duration, nights, travellers }) {
+export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onNameChange, onDescriptionChange, onPhotoChange, onDateChange, onActivitiesChange, onActivityVoteToggle, onAccommodationsChange, onAccommodationVoteToggle, onAccommodationWishlistUrlChange, onSelectedAccommodationChange, duration, nights, travellers }) {
+  const destination = destinationBreakdown(day, eligibleVoters(travellers));
   const number = String(index + 1).padStart(2, "0");
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -149,7 +151,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
                 )}
                 <DestinationTag value={duration} />
               </div>
-              <DestinationCost value={day.cost} onChange={onCostChange} currency={currency} />
+              <DestinationCost total={destination.total} priceNeeded={destination.priceNeeded} currency={currency} />
             </div>
 
             {/* Description */}

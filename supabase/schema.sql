@@ -675,11 +675,17 @@ grant insert, delete on public.accommodation_votes to authenticated;
 -- accommodation from a different stop.
 grant update (selected_accommodation_id) on public.stops to authenticated;
 
--- Stop details (destination name, description, date, cost, and the Airbnb
--- wishlist URL): the app may also update exactly these five columns, again
+-- Stop details (destination name, description, date and the Airbnb wishlist
+-- URL): the app may also update exactly these four columns, again
 -- column-level. Everything else on stops (trip_id, sort_order, photo_url, ...)
 -- stays read-only, and membership RLS still applies to every write.
-grant update (loc, description, date, cost, accommodation_wishlist_url) on public.stops to authenticated;
+-- stops.cost is DEPRECATED: a destination's total is now calculated in the app
+-- from the selected stay + Everyone's-pick activities, so cost is not writable.
+-- The column and its seed values are kept, unused. The revoke removes cost from
+-- databases where an earlier version of this file already granted it.
+grant update (loc, description, date, accommodation_wishlist_url) on public.stops to authenticated;
+revoke update (cost) on public.stops from authenticated;
+comment on column public.stops.cost is 'DEPRECATED, unused. Destination totals are calculated in the app (selected stay total + Everyone''s-pick activity costs); nothing reads or writes this column.';
 
 
 -- ----------------------------------------------------------------------------

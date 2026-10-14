@@ -1,6 +1,6 @@
 "use client";
 
-import { accommodationTotalPrice } from "@/lib/accommodation";
+import { destinationBreakdown, eligibleVoters, formatMoney } from "@/lib/cost";
 
 const COST_RE = /^\d*\.?\d{0,2}$/;
 
@@ -9,41 +9,29 @@ const num = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-// Whole £ amounts show without decimals, matching the rest of the UI; a
-// value with pence always shows exactly 2 decimal places.
-function formatMoney(n) {
-  const rounded = Math.round(n * 100) / 100;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
-}
-
 // Trip cost summary — reads live totals straight from Itinerary's stops
 // state (destinations, transport legs, activities) plus the trip-level extra
 // costs and traveller list, so it can never drift out of sync with the
 // editing UI above it. No separate/duplicate cost state of its own.
 export default function CostSummary({ stops, extraCosts, onExtraCostsChange, travellers, currency }) {
-  const destinationTotal = stops.reduce((sum, s) => sum + num(s.cost), 0);
-
-  // Accommodation options are shortlists — only the ONE selected stay per
-  // destination (if any) contributes to the trip total, using the same
-  // totalPrice each AccommodationCard already displays.
-  const accommodationTotal = stops.reduce((sum, s) => {
-    const selected = (s.accommodations || []).find((a) => a.id === s.selectedAccommodationId);
-    return sum + (selected ? accommodationTotalPrice(selected) : 0);
-  }, 0);
+  // Destinations = selected stays + Everyone's-pick activities, from the same
+  // helper the stop headers use. Accommodation and Activities below are its
+  // BREAKDOWN, not extra totals — only `destinationTotal` enters grandTotal.
+  const voters = eligibleVoters(travellers);
+  const breakdowns = stops.map((s) => destinationBreakdown(s, voters));
+  const accommodationTotal = breakdowns.reduce((sum, b) => sum + b.accommodation, 0);
+  const activityTotal = breakdowns.reduce((sum, b) => sum + b.activities, 0);
+  const destinationTotal = breakdowns.reduce((sum, b) => sum + b.total, 0);
+  const priceNeededCount = breakdowns.filter((b) => b.priceNeeded).length;
 
   const transportTotal = stops.reduce(
     (sum, s) => sum + s.journey.filter((item) => item.type === "leg").reduce((a, leg) => a + num(leg.cost), 0),
     0
   );
 
-  const activityTotal = stops.reduce(
-    (sum, s) => sum + s.activities.reduce((a, act) => a + num(act.cost), 0),
-    0
-  );
-
   const extrasTotal = extraCosts.reduce((sum, e) => sum + num(e.amount), 0);
 
-  const grandTotal = destinationTotal + accommodationTotal + transportTotal + activityTotal + extrasTotal;
+  const grandTotal = destinationTotal + transportTotal + extrasTotal;
 
   const includedCount = travellers.filter((t) => t.included).length;
   const perPerson = includedCount > 0 ? grandTotal / includedCount : null;
@@ -92,22 +80,28 @@ export default function CostSummary({ stops, extraCosts, onExtraCostsChange, tra
               {currency}{formatMoney(destinationTotal)}
             </dd>
           </div>
-          <div className="flex items-baseline justify-between gap-4 pb-2">
-            <dt className="uppercase tracking-wide text-stone/60">Accommodation</dt>
-            <dd className="text-foreground font-medium">
+          {/* Breakdown of Destinations — not added to the total again. */}
+          <div className="-mt-2 flex items-baseline justify-between gap-4 pb-2 pl-4 text-stone/70">
+            <dt className="tracking-wide">
+              Accommodation
+              {priceNeededCount > 0 && (
+                <span className="ml-2 text-[10px] uppercase text-stone/60">Price needed</span>
+              )}
+            </dt>
+            <dd>
               {currency}{formatMoney(accommodationTotal)}
+            </dd>
+          </div>
+          <div className="-mt-2 flex items-baseline justify-between gap-4 pb-2 pl-4 text-stone/70">
+            <dt className="tracking-wide">Activities</dt>
+            <dd>
+              {currency}{formatMoney(activityTotal)}
             </dd>
           </div>
           <div className="flex items-baseline justify-between gap-4 pb-2">
             <dt className="uppercase tracking-wide text-stone/60">Transport</dt>
             <dd className="text-foreground font-medium">
               {currency}{formatMoney(transportTotal)}
-            </dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-4 pb-2">
-            <dt className="uppercase tracking-wide text-stone/60">Activities</dt>
-            <dd className="text-foreground font-medium">
-              {currency}{formatMoney(activityTotal)}
             </dd>
           </div>
           <div className="flex items-baseline justify-between gap-4 border-t border-border pt-3">
