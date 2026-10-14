@@ -9,6 +9,7 @@ import {
   checkMembership,
   createActivityVoteWriter,
   createAccommodationWriter,
+  createSelectedAccommodationWriter,
   createAccommodationVoteWriter,
   fetchTripRows,
   joinTrip,
@@ -39,6 +40,7 @@ export default function TripGate({ localItinerary }) {
     const rows = await fetchTripRows(supabase);
     const accommodationWriter = createAccommodationWriter(supabase);
     const writeAccommodationVote = createAccommodationVoteWriter(supabase);
+    const writeSelectedAccommodation = createSelectedAccommodationWriter(supabase);
     setTrip({
       itinerary: buildItineraryFromRows(rows, localItinerary),
       travellers: buildTravellersFromRows(rows),
@@ -49,6 +51,12 @@ export default function TripGate({ localItinerary }) {
         accommodationWriter
           .ready(accommodationId)
           .then(() => writeAccommodationVote(accommodationId, travellerId, selected)),
+      // Selecting a stay waits for that card's own add/edit to finish so the
+      // row exists before stops.selected_accommodation_id points at it.
+      persistSelectedAccommodation: (stopId, accommodationId) =>
+        (accommodationId ? accommodationWriter.ready(accommodationId) : Promise.resolve()).then(() =>
+          writeSelectedAccommodation(stopId, accommodationId)
+        ),
     });
     setStatus("ready");
   };
@@ -106,6 +114,7 @@ export default function TripGate({ localItinerary }) {
         onPersistActivityVote={trip.persistActivityVote}
         accommodationWriter={trip.accommodationWriter}
         onPersistAccommodationVote={trip.persistAccommodationVote}
+        onPersistSelectedAccommodation={trip.persistSelectedAccommodation}
       />
     );
   }

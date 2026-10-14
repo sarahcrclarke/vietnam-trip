@@ -276,3 +276,25 @@ export function createAccommodationVoteWriter(supabase) {
     return next;
   };
 }
+
+// WRITE: a stop's selected stay — the only column the app may update on
+// public.stops (column-level grant). null clears the selection. Writes for the
+// same stop are chained so rapid select/deselect clicks land in order. The
+// database (composite FK) rejects an accommodation from a different stop.
+export function createSelectedAccommodationWriter(supabase) {
+  const chains = new Map();
+  return (stopId, accommodationId) => {
+    const run = async () => {
+      const { data, error } = await supabase
+        .from("stops")
+        .update({ selected_accommodation_id: accommodationId ?? null })
+        .eq("id", stopId)
+        .select("id");
+      if (error) throw error;
+      if (!data?.length) throw new Error("Stop not updated"); // RLS filtered it out
+    };
+    const next = (chains.get(stopId) ?? Promise.resolve()).catch(() => {}).then(run);
+    chains.set(stopId, next);
+    return next;
+  };
+}

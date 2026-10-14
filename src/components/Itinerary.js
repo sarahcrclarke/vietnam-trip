@@ -36,7 +36,7 @@ import { isUuid } from "@/lib/tripData";
 // stays a local fallback until the Storage migration).
 const ACCOMMODATION_SAVED_FIELDS = ["name", "type", "location", "pricePerNight", "totalPrice", "rating", "reviewCount", "link"];
 
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, accommodationWriter, onPersistAccommodationVote }) {
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -292,7 +292,9 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                 if (s.id !== id || s.accommodations.some((a) => a.id === old.id)) return s;
                 const next = [...s.accommodations];
                 next.splice(Math.min(index, next.length), 0, old);
-                return { ...s, accommodations: next };
+                // The card was the selected stay: put the selection back too.
+                const restoreSelection = stop.selectedAccommodationId === old.id && !s.selectedAccommodationId;
+                return { ...s, accommodations: next, selectedAccommodationId: restoreSelection ? old.id : s.selectedAccommodationId };
               })
             )
           )
@@ -307,9 +309,32 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
     []
   );
 
+  // The ONE path for selecting / deselecting a stay (null = deselect), used by
+  // both the Accommodation tab and the VOTES tab. Optimistic; in Supabase mode
+  // (saved stops only) it then persists stops.selected_accommodation_id. On
+  // failure the previous selection is restored — but only if nothing newer has
+  // changed it since, so a slow failed write can't undo a later choice.
   const updateSelectedAccommodation = useCallback(
-    (id, selectedAccommodationId) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, selectedAccommodationId } : s))),
-    []
+    (id, selectedAccommodationId) => {
+      const stop = stopsRef.current.find((s) => s.id === id);
+      const previous = stop?.selectedAccommodationId ?? null;
+      const setSelection = (value) =>
+        setStops((prev) => prev.map((s) => (s.id === id ? { ...s, selectedAccommodationId: value } : s)));
+      setSelection(selectedAccommodationId);
+      if (!onPersistSelectedAccommodation || !stop || !isUuid(id)) return;
+      onPersistSelectedAccommodation(id, selectedAccommodationId).catch((err) => {
+        console.error("Selected stay save failed", err);
+        setStops((prev) =>
+          prev.map((s) =>
+            s.id === id && (s.selectedAccommodationId ?? null) === selectedAccommodationId
+              ? { ...s, selectedAccommodationId: previous }
+              : s
+          )
+        );
+        setVoteError("Couldn't save that stay selection. Please try again.");
+      });
+    },
+    [onPersistSelectedAccommodation]
   );
 
   // Vote/select actions reachable from the Votes page — same `setStops`,
@@ -389,15 +414,12 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   );
 
   const selectAccommodation = useCallback(
-    (stopId, accommodationId) =>
-      setStops((prev) =>
-        prev.map((s) =>
-          s.id !== stopId
-            ? s
-            : { ...s, selectedAccommodationId: s.selectedAccommodationId === accommodationId ? null : accommodationId }
-        )
-      ),
-    []
+    (stopId, accommodationId) => {
+      const stop = stopsRef.current.find((s) => s.id === stopId);
+      if (!stop) return;
+      updateSelectedAccommodation(stopId, stop.selectedAccommodationId === accommodationId ? null : accommodationId);
+    },
+    [updateSelectedAccommodation]
   );
 
   if (view === "votes") {

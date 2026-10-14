@@ -188,15 +188,39 @@ create table if not exists public.accommodations (
 comment on table public.accommodations is 'Shortlisted accommodation options for one stop. `source` is set to ''airbnb'' when added via the "Add from Airbnb" URL flow, otherwise null.';
 
 -- Now that accommodations exists, attach the foreign key for a stop's
--- selected stay. ON DELETE SET NULL: removing the selected accommodation
--- option simply clears the selection, it never deletes the stop.
+-- selected stay. It is a COMPOSITE key (stop id + accommodation id) so the
+-- database itself guarantees a stop can only select an accommodation that
+-- belongs to that same stop — a plain FK on accommodations(id) alone would let
+-- Stop A point at Stop B's accommodation, which membership RLS cannot catch.
+-- (stops.id, selected_accommodation_id) -> accommodations(stop_id, id).
+-- A null selected_accommodation_id is not checked (MATCH SIMPLE), so "no stay
+-- selected" is always valid.
+-- ON DELETE SET NULL (selected_accommodation_id): deleting the selected
+-- accommodation clears ONLY the selection column — never the stop's id, never
+-- the stop row. The column-list form requires PostgreSQL 15+ (all current
+-- Supabase projects); the guard below fails with a clear message otherwise
+-- instead of half-applying.
+do $$
+begin
+  if current_setting('server_version_num')::int < 150000 then
+    raise exception 'schema.sql needs PostgreSQL 15+ (ON DELETE SET NULL (column)); found %', current_setting('server_version');
+  end if;
+end $$;
+
+-- The referenced columns must be unique; (stop_id, id) trivially is, id being
+-- the primary key.
+create unique index if not exists accommodations_stop_id_id_key
+  on public.accommodations (stop_id, id);
+
 alter table public.stops
   drop constraint if exists stops_selected_accommodation_id_fkey;
 alter table public.stops
-  add constraint stops_selected_accommodation_id_fkey
-  foreign key (selected_accommodation_id)
-  references public.accommodations(id)
-  on delete set null;
+  drop constraint if exists stops_selected_accommodation_same_stop_fkey;
+alter table public.stops
+  add constraint stops_selected_accommodation_same_stop_fkey
+  foreign key (id, selected_accommodation_id)
+  references public.accommodations (stop_id, id)
+  on delete set null (selected_accommodation_id);
 
 -- --- journey_items (transport legs + stopovers) -----------------------------
 -- Legs and stopovers share one ordered list per stop in the app (Journey.js),
@@ -642,6 +666,14 @@ grant insert, update, delete on public.accommodations to authenticated;
 -- granted — no UPDATE, nothing for anon/public. The "trip members full
 -- access" policy on accommodation_votes still applies to every write.
 grant insert, delete on public.accommodation_votes to authenticated;
+
+-- Selected stay ("Select this stay"): the app may update exactly ONE column on
+-- stops — selected_accommodation_id — via a COLUMN-level grant, so destination
+-- name, dates, cost etc. stay read-only. No INSERT/DELETE on stops, nothing to
+-- anon/public. The "trip members full access" policy on stops still applies
+-- (membership required), and the composite foreign key above rejects an
+-- accommodation from a different stop.
+grant update (selected_accommodation_id) on public.stops to authenticated;
 
 
 -- ----------------------------------------------------------------------------
