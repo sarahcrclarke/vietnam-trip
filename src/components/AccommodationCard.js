@@ -301,17 +301,6 @@ export default function AccommodationCard({ accommodation, currency, voters, una
               <button
                 type="button"
                 onClick={() => {
-                  onSelectStay();
-                  setShowMenu(false);
-                }}
-                className="block w-full text-left text-xs font-medium text-forest transition-colors hover:text-forest/80"
-              >
-                {selected ? "Deselect stay" : "Select stay"}
-              </button>
-              <div className="my-1 border-t border-border" />
-              <button
-                type="button"
-                onClick={() => {
                   setEditing(true);
                   setShowMenu(false);
                 }}
@@ -359,7 +348,7 @@ export default function AccommodationCard({ accommodation, currency, voters, una
         )}
       </div>
 
-      {(unanimous || selected) && (
+      {unanimous && (
         <div className="mt-2 space-y-0.5">
           {unanimous && (
             <p className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-rust">
@@ -367,16 +356,10 @@ export default function AccommodationCard({ accommodation, currency, voters, una
               Everyone&rsquo;s pick
             </p>
           )}
-          {selected && (
-            <p className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-forest">
-              <span aria-hidden>✓</span>
-              Selected stay
-            </p>
-          )}
         </div>
       )}
 
-      <h4 className={`font-display text-base font-semibold leading-tight text-foreground truncate ${(unanimous || selected) ? "mt-1" : "mt-3"}`}>
+      <h4 className={`font-display text-base font-semibold leading-tight text-foreground truncate ${unanimous ? "mt-1" : "mt-3"}`}>
         {nameVal}
       </h4>
 
@@ -440,6 +423,22 @@ export default function AccommodationCard({ accommodation, currency, voters, una
         votes={accommodation.votes || {}}
         onToggle={onToggleVote}
       />
+
+      {/* Final decision — separate from preference voting above. Choosing
+          another stay for this destination replaces the previous one. */}
+      <button
+        type="button"
+        onClick={onSelectStay}
+        aria-pressed={Boolean(selected)}
+        className={`mt-3 inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 font-sans text-[10px] font-semibold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-forest/40 ${
+          selected
+            ? "border-forest/60 bg-sage/30 text-forest"
+            : "border-stone/40 text-stone/70 hover:border-forest/50 hover:text-forest"
+        }`}
+      >
+        <span aria-hidden>{selected ? "✓" : "○"}</span>
+        Ready to book
+      </button>
     </div>
   );
 }
