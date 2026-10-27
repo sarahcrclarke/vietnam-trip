@@ -1,6 +1,6 @@
 "use client";
 
-import { destinationBreakdown, eligibleVoters, formatMoney } from "@/lib/cost";
+import { destinationBreakdown, formatMoney } from "@/lib/cost";
 
 const COST_RE = /^\d*\.?\d{0,2}$/;
 
@@ -14,11 +14,10 @@ const num = (v) => {
 // costs and traveller list, so it can never drift out of sync with the
 // editing UI above it. No separate/duplicate cost state of its own.
 export default function CostSummary({ stops, extraCosts, onExtraCostsChange, travellers, currency }) {
-  // Destinations = selected stays + Everyone's-pick activities, from the same
+  // Destinations = selected stays + Ready-to-book activities, from the same
   // helper the stop headers use. Accommodation and Activities below are its
   // BREAKDOWN, not extra totals — only `destinationTotal` enters grandTotal.
-  const voters = eligibleVoters(travellers);
-  const breakdowns = stops.map((s) => destinationBreakdown(s, voters));
+  const breakdowns = stops.map((s) => destinationBreakdown(s));
   const accommodationTotal = breakdowns.reduce((sum, b) => sum + b.accommodation, 0);
   const activityTotal = breakdowns.reduce((sum, b) => sum + b.activities, 0);
   const destinationTotal = breakdowns.reduce((sum, b) => sum + b.total, 0);

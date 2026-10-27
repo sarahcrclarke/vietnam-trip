@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CameraIcon } from "./icons";
 import ActivityVotes from "./ActivityVotes";
 import ActivityFields from "./ActivityFields";
+import ReadyToBookButton from "./ReadyToBookButton";
 
 // Controlled by Itinerary's stops state, via ActivityGrid (not local),
 // because the Votes page reads name/image straight from `stops` and must
@@ -13,8 +14,8 @@ import ActivityFields from "./ActivityFields";
 // replace/remove (certainly orphaned at that moment) but deliberately not on
 // unmount, since the shared `image` value may still be in use elsewhere
 // (Votes) after this component unmounts.
-export default function ActivityCard({ activity, currency, voters, unanimous, onToggleVote, onCostChange, onNameChange, onLinkChange, onTravelTimeChange, onImageChange, onRemove }) {
-  const { name, link, cost, image, votes } = activity;
+export default function ActivityCard({ activity, currency, voters, unanimous, onToggleVote, onReadyToggle, onCostChange, onNameChange, onLinkChange, onTravelTimeChange, onImageChange, onRemove }) {
+  const { name, link, cost, image, votes, readyToBook } = activity;
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
@@ -61,7 +62,7 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
 
   return (
     <div className="group flex snap-start flex-col">
-      <div className="relative overflow-hidden rounded-[5px]">
+      <div className={`relative overflow-hidden rounded-[5px] ${readyToBook ? "ring-1 ring-forest/40" : ""}`}>
         {image ? (
           <img
             src={image}
@@ -196,6 +197,10 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
       />
 
       <ActivityVotes voters={voters} votes={votes} onToggle={onToggleVote} />
+
+      {/* Final decision — separate from preference voting above, and unlike
+          accommodation several activities per destination can be ready. */}
+      <ReadyToBookButton ready={readyToBook} onToggle={onReadyToggle} className="mt-2.5" />
     </div>
   );
 }

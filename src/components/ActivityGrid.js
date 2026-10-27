@@ -15,7 +15,7 @@ import { isUnanimous } from "@/lib/voting";
 // mobile, continuing sideways into a horizontally-scrollable track.
 
 const ActivityGrid = forwardRef(function ActivityGrid(
-  { activities, onChange, onVoteToggle, currency, loc, travellers, renderControls },
+  { activities, onChange, onVoteToggle, onReadyToggle, currency, loc, travellers, renderControls },
   ref
 ) {
   const seq = useRef(0);
@@ -34,7 +34,7 @@ const ActivityGrid = forwardRef(function ActivityGrid(
     const id = `new-${Date.now()}-${seq.current}`;
     onChange([
       ...activities,
-      { id, name: "", link: "", cost: "", image: null, travelTime: "", votes: {} },
+      { id, name: "", link: "", cost: "", image: null, travelTime: "", votes: {}, readyToBook: false },
     ]);
   };
 
@@ -108,6 +108,7 @@ const ActivityGrid = forwardRef(function ActivityGrid(
             voters={voters}
             unanimous={isUnanimous(activity.votes, voters)}
             onToggleVote={(travellerId) => toggleVote(activity.id, travellerId)}
+            onReadyToggle={() => onReadyToggle(activity.id)}
             onCostChange={(cost) => updateCost(activity.id, cost)}
             onNameChange={(name) => patchActivity(activity.id, { name })}
             onLinkChange={(link) => patchActivity(activity.id, { link })}

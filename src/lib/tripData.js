@@ -113,6 +113,7 @@ export function buildItineraryFromRows(rows, localItinerary) {
         cost: Number(a.cost),
         image: a.image_url || localImage(s.loc, a.name),
         travelTime: a.travel_time || "",
+        readyToBook: Boolean(a.ready_to_book),
         voteMap: toVoteMap(rows.activityVotes, "activity_id", a.id),
       })),
     accommodations: rows.accommodations
@@ -181,6 +182,29 @@ export function createActivityVoteWriter(supabase) {
     };
     const next = (chains.get(key) ?? Promise.resolve()).catch(() => {}).then(run);
     chains.set(key, next);
+    return next;
+  };
+}
+
+// WRITE: an activity's Ready to book flag — the only column the app may update
+// on public.activities (column-level grant). Several activities per stop can be
+// ready, so unlike the selected stay there is no per-stop state: writes are
+// chained per activity so rapid on/off clicks land in order. A zero-row update
+// (RLS filtered it out, or the row doesn't exist) is a failure.
+export function createActivityReadyWriter(supabase) {
+  const chains = new Map();
+  return (activityId, ready) => {
+    const run = async () => {
+      const { data, error } = await supabase
+        .from("activities")
+        .update({ ready_to_book: Boolean(ready) })
+        .eq("id", activityId)
+        .select("id");
+      if (error) throw error;
+      if (!data?.length) throw new Error("Activity not updated");
+    };
+    const next = (chains.get(activityId) ?? Promise.resolve()).catch(() => {}).then(run);
+    chains.set(activityId, next);
     return next;
   };
 }

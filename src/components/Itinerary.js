@@ -44,7 +44,7 @@ const STOP_FIELD_COLUMNS = {
   accommodationWishlistUrl: ["accommodation_wishlist_url", (v) => (v ? v : null)],
 };
 
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, onPersistActivityReady, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -62,6 +62,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
         activities: activities.map(({ voteMap, ...a }) => ({
           ...a,
           cost: a.cost ? String(a.cost) : "",
+          readyToBook: Boolean(a.readyToBook),
           votes: voteMap ?? migrateVotes(a.votes),
         })),
         accommodations: (accommodations || []).map(migrateAccommodation),
@@ -390,13 +391,59 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
       if (!activity) return;
       const next = !activity.votes[travellerId];
       setActivityVote(stopId, activityId, travellerId, next);
-      if (!onPersistActivityVote) return;
+      // Local-only activities (temporary non-UUID ids) never touch the DB.
+      if (!onPersistActivityVote || !isUuid(activityId)) return;
       onPersistActivityVote(activityId, travellerId, next).catch(() => {
         setActivityVote(stopId, activityId, travellerId, !next);
         setVoteError("Couldn't save that vote. Please try again.");
       });
     },
     [onPersistActivityVote, setActivityVote]
+  );
+
+  const setActivityReady = useCallback(
+    (stopId, activityId, ready) =>
+      setStops((prev) =>
+        prev.map((s) =>
+          s.id !== stopId
+            ? s
+            : { ...s, activities: s.activities.map((a) => (a.id === activityId ? { ...a, readyToBook: ready } : a)) }
+        )
+      ),
+    []
+  );
+
+  // Ready to book: the final decision to do an activity, independent of votes.
+  // Any number per stop. Optimistic; in Supabase mode (saved activities only —
+  // local-only ones have non-UUID ids) it persists activities.ready_to_book.
+  // On failure the flag is put back, but only if nothing newer has changed it.
+  const toggleActivityReady = useCallback(
+    (stopId, activityId) => {
+      const activity = stopsRef.current
+        .find((s) => s.id === stopId)
+        ?.activities.find((a) => a.id === activityId);
+      if (!activity) return;
+      const next = !activity.readyToBook;
+      setActivityReady(stopId, activityId, next);
+      if (!onPersistActivityReady || !isUuid(activityId)) return;
+      onPersistActivityReady(activityId, next).catch((err) => {
+        console.error("Activity ready-to-book save failed", err);
+        setStops((prev) =>
+          prev.map((s) =>
+            s.id !== stopId
+              ? s
+              : {
+                  ...s,
+                  activities: s.activities.map((a) =>
+                    a.id === activityId && a.readyToBook === next ? { ...a, readyToBook: !next } : a
+                  ),
+                }
+          )
+        );
+        setVoteError("Couldn't save that change. Please try again.");
+      });
+    },
+    [onPersistActivityReady, setActivityReady]
   );
 
   const setAccommodationVote = useCallback(
@@ -452,6 +499,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
           travellers={travellers}
           currency={currency}
           onToggleActivityVote={toggleActivityVote}
+          onToggleActivityReady={toggleActivityReady}
           onToggleAccommodationVote={toggleAccommodationVote}
           onSelectAccommodation={selectAccommodation}
         />
@@ -504,6 +552,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onDateChange={updateDate}
                   onActivitiesChange={(activities) => updateActivities(stop.id, activities)}
                   onActivityVoteToggle={(activityId, travellerId) => toggleActivityVote(stop.id, activityId, travellerId)}
+                  onActivityReadyToggle={(activityId) => toggleActivityReady(stop.id, activityId)}
                   onAccommodationsChange={(accommodations) => updateAccommodations(stop.id, accommodations)}
                   onAccommodationVoteToggle={(accommodationId, travellerId) => toggleAccommodationVote(stop.id, accommodationId, travellerId)}
                   onAccommodationWishlistUrlChange={(url) => updateAccommodationWishlistUrl(stop.id, url)}

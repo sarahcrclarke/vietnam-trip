@@ -8,6 +8,7 @@ import {
   buildTravellersFromRows,
   checkMembership,
   createActivityVoteWriter,
+  createActivityReadyWriter,
   createAccommodationWriter,
   createSelectedAccommodationWriter,
   createStopFieldWriter,
@@ -46,6 +47,7 @@ export default function TripGate({ localItinerary }) {
       itinerary: buildItineraryFromRows(rows, localItinerary),
       travellers: buildTravellersFromRows(rows),
       persistActivityVote: createActivityVoteWriter(supabase),
+      persistActivityReady: createActivityReadyWriter(supabase),
       accommodationWriter,
       // A vote waits for its card's own add/edit to finish so the row exists.
       persistAccommodationVote: (accommodationId, travellerId, selected) =>
@@ -114,6 +116,7 @@ export default function TripGate({ localItinerary }) {
         itinerary={trip.itinerary}
         initialTravellers={trip.travellers}
         onPersistActivityVote={trip.persistActivityVote}
+        onPersistActivityReady={trip.persistActivityReady}
         accommodationWriter={trip.accommodationWriter}
         onPersistAccommodationVote={trip.persistAccommodationVote}
         onPersistSelectedAccommodation={trip.persistSelectedAccommodation}

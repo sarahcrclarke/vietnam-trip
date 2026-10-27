@@ -1,6 +1,6 @@
 import { formatMoney } from "@/lib/cost";
 
-// Read-only destination total (selected stay + Everyone's-pick activities),
+// Read-only destination total (selected stay + Ready-to-book activities),
 // calculated by lib/cost.js. £ flush against the value; same rust, bold,
 // right-aligned treatment the editable cost had.
 export default function DestinationCost({ total, currency, priceNeeded }) {

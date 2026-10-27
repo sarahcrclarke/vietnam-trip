@@ -265,12 +265,19 @@ create table if not exists public.activities (
   cost         numeric(10,2) not null default 0 check (cost >= 0),
   image_url    text,
   travel_time  text,
+  ready_to_book boolean not null default false,
   sort_order   integer not null default 0,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
   updated_by   uuid references public.travellers(id) on delete set null
 );
 comment on table public.activities is 'Things-to-do options for one stop.';
+
+-- Added after the first release: for databases created before this column
+-- existed, `create table if not exists` above is a no-op, so add it here too.
+alter table public.activities
+  add column if not exists ready_to_book boolean not null default false;
+comment on column public.activities.ready_to_book is 'Final decision that the group is doing/booking this activity. Independent of activity_votes (preference). Several activities per stop may be ready; their costs count toward the destination total.';
 
 -- --- activity_votes --------------------------------------------------------
 -- A normalized row per traveller/activity — presence of a row IS the vote
@@ -661,6 +668,13 @@ grant insert, delete on public.activity_votes to authenticated;
 -- write (membership required).
 grant insert, update, delete on public.accommodations to authenticated;
 
+-- Activity "Ready to book": the app may update exactly ONE column on
+-- activities — ready_to_book — via a COLUMN-level grant, so activity names,
+-- costs, links etc. stay read-only. No INSERT/DELETE on activities, nothing to
+-- anon/public. The "trip members full access" policy on activities still
+-- applies (membership required).
+grant update (ready_to_book) on public.activities to authenticated;
+
 -- Accommodation votes: like activity votes, a vote is a row that is inserted
 -- (vote) or deleted (un-vote), never edited, so only INSERT and DELETE are
 -- granted — no UPDATE, nothing for anon/public. The "trip members full
@@ -680,12 +694,12 @@ grant update (selected_accommodation_id) on public.stops to authenticated;
 -- column-level. Everything else on stops (trip_id, sort_order, photo_url, ...)
 -- stays read-only, and membership RLS still applies to every write.
 -- stops.cost is DEPRECATED: a destination's total is now calculated in the app
--- from the selected stay + Everyone's-pick activities, so cost is not writable.
+-- from the selected stay + Ready-to-book activities, so cost is not writable.
 -- The column and its seed values are kept, unused. The revoke removes cost from
 -- databases where an earlier version of this file already granted it.
 grant update (loc, description, date, accommodation_wishlist_url) on public.stops to authenticated;
 revoke update (cost) on public.stops from authenticated;
-comment on column public.stops.cost is 'DEPRECATED, unused. Destination totals are calculated in the app (selected stay total + Everyone''s-pick activity costs); nothing reads or writes this column.';
+comment on column public.stops.cost is 'DEPRECATED, unused. Destination totals are calculated in the app (selected stay total + Ready-to-book activity costs); nothing reads or writes this column.';
 
 
 -- ----------------------------------------------------------------------------

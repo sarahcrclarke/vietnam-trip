@@ -19,8 +19,8 @@ export default function VoteDecisionRow({
   votes,
   onToggleVote,
   kind = "activity",
-  selected,
-  onSelectStay,
+  ready,
+  onToggleReady,
 }) {
   const VotesComponent = kind === "accommodation" ? AccommodationVotes : ActivityVotes;
   // Both vote-pill components carry their own top margin, sized for stacking
@@ -53,29 +53,24 @@ export default function VoteDecisionRow({
               <span aria-hidden>★</span> Everyone&rsquo;s pick
             </span>
           )}
-          {kind === "accommodation" && selected && (
-            <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold uppercase tracking-wide text-forest">
-              <span aria-hidden>✓</span> Selected
-            </span>
-          )}
         </div>
       </div>
 
-      <div className="flex flex-none items-center gap-2">
+      <div className="flex flex-none flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
         <div className={votesMarginFix}>
           <VotesComponent voters={voters} votes={votes || {}} onToggle={onToggleVote} />
         </div>
-        {kind === "accommodation" && (
-          <button
-            type="button"
-            onClick={onSelectStay}
-            className={`font-sans text-[10px] font-semibold uppercase tracking-wide transition-colors ${
-              selected ? "text-forest/60 hover:text-forest" : "text-stone/50 hover:text-forest"
-            }`}
-          >
-            {selected ? "Deselect" : "Select"}
-          </button>
-        )}
+        {/* Final decision — same shared state as the card's Ready to book control. */}
+        <button
+          type="button"
+          onClick={onToggleReady}
+          aria-pressed={Boolean(ready)}
+          className={`whitespace-nowrap font-sans text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+            ready ? "text-forest" : "text-stone/50 hover:text-forest"
+          }`}
+        >
+          <span aria-hidden>{ready ? "✓" : "○"}</span> Ready to book
+        </button>
       </div>
     </div>
   );

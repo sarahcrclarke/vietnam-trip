@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CameraIcon } from "./icons";
 import AccommodationVotes from "./AccommodationVotes";
+import ReadyToBookButton from "./ReadyToBookButton";
 import { derivePricePerNight, deriveTotalPrice, pricePerPerson, formatMoney } from "@/lib/accommodation";
 
 const displayMoney = (v) => (Number.isFinite(Number(v)) ? formatMoney(Number(v)) : v);
@@ -426,19 +427,7 @@ export default function AccommodationCard({ accommodation, currency, voters, una
 
       {/* Final decision — separate from preference voting above. Choosing
           another stay for this destination replaces the previous one. */}
-      <button
-        type="button"
-        onClick={onSelectStay}
-        aria-pressed={Boolean(selected)}
-        className={`mt-3 inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 font-sans text-[10px] font-semibold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-forest/40 ${
-          selected
-            ? "border-forest/60 bg-sage/30 text-forest"
-            : "border-stone/40 text-stone/70 hover:border-forest/50 hover:text-forest"
-        }`}
-      >
-        <span aria-hidden>{selected ? "✓" : "○"}</span>
-        Ready to book
-      </button>
+      <ReadyToBookButton ready={selected} onToggle={onSelectStay} />
     </div>
   );
 }

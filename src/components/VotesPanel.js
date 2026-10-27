@@ -37,6 +37,7 @@ export default function VotesPanel({
   travellers,
   currency,
   onToggleActivityVote,
+  onToggleActivityReady,
   onToggleAccommodationVote,
   onSelectAccommodation,
 }) {
@@ -112,7 +113,7 @@ export default function VotesPanel({
             ) : (
               <p className="mt-1 font-display text-2xl font-bold text-forest">
                 {stopsWithSelection.length} / {stopsWithShortlist.length}
-                <span className="ml-1 font-sans text-xs font-normal text-stone/50">selected</span>
+                <span className="ml-1 font-sans text-xs font-normal text-stone/50">ready to book</span>
               </p>
             )}
           </div>
@@ -140,6 +141,8 @@ export default function VotesPanel({
                   voters={voters}
                   votes={activity.votes}
                   onToggleVote={(travellerId) => onToggleActivityVote(stop.id, activity.id, travellerId)}
+                  ready={activity.readyToBook}
+                  onToggleReady={() => onToggleActivityReady(stop.id, activity.id)}
                 />
               ))}
             </div>
@@ -167,7 +170,7 @@ export default function VotesPanel({
               <VoteDestinationGroup
                 key={stop.id}
                 title={stop.loc || "Untitled destination"}
-                count={stop.selectedAccommodationId ? "✓ Stay selected" : "Still choosing"}
+                count={stop.selectedAccommodationId ? "✓ Ready to book" : "Still choosing"}
                 defaultOpen
               >
                 {stop.accommodations.map((acc) => {
@@ -180,11 +183,11 @@ export default function VotesPanel({
                       title={acc.name}
                       meta={total > 0 ? `${currency}${total} total` : null}
                       unanimous={isUnanimous(acc.votes || {}, voters)}
-                      selected={stop.selectedAccommodationId === acc.id}
+                      ready={stop.selectedAccommodationId === acc.id}
                       voters={voters}
                       votes={acc.votes}
                       onToggleVote={(travellerId) => onToggleAccommodationVote(stop.id, acc.id, travellerId)}
-                      onSelectStay={() => onSelectAccommodation(stop.id, acc.id)}
+                      onToggleReady={() => onSelectAccommodation(stop.id, acc.id)}
                     />
                   );
                 })}
@@ -219,6 +222,8 @@ export default function VotesPanel({
                       voters={voters}
                       votes={activity.votes}
                       onToggleVote={(travellerId) => onToggleActivityVote(stop.id, activity.id, travellerId)}
+                  ready={activity.readyToBook}
+                  onToggleReady={() => onToggleActivityReady(stop.id, activity.id)}
                     />
                   ))}
                   {rows.length > CONTENDERS_INITIAL && (
@@ -272,6 +277,8 @@ export default function VotesPanel({
                       voters={voters}
                       votes={activity.votes}
                       onToggleVote={(travellerId) => onToggleActivityVote(stop.id, activity.id, travellerId)}
+                  ready={activity.readyToBook}
+                  onToggleReady={() => onToggleActivityReady(stop.id, activity.id)}
                     />
                   ))}
                 </VoteDestinationGroup>
