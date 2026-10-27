@@ -12,7 +12,7 @@ import { destinationBreakdown } from "@/lib/cost";
 import DestinationPhoto from "./DestinationPhoto";
 import { DragHandleIcon } from "./icons";
 
-export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onNameChange, onDescriptionChange, onPhotoChange, onDateChange, onActivitiesChange, onActivityVoteToggle, onActivityReadyToggle, onAccommodationsChange, onAccommodationVoteToggle, onAccommodationWishlistUrlChange, onSelectedAccommodationChange, duration, nights, travellers }) {
+export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onNameChange, onDescriptionChange, onPhotoChange, onDateChange, onActivitiesChange, onActivityFieldChange, onActivityVoteToggle, onActivityReadyToggle, onAccommodationsChange, onAccommodationVoteToggle, onAccommodationWishlistUrlChange, onSelectedAccommodationChange, duration, nights, travellers }) {
   const destination = destinationBreakdown(day);
   const number = String(index + 1).padStart(2, "0");
   const [confirming, setConfirming] = useState(false);
@@ -218,6 +218,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
                     ref={gridRef}
                     activities={day.activities}
                     onChange={onActivitiesChange}
+                    onFieldChange={onActivityFieldChange}
                     onVoteToggle={onActivityVoteToggle}
                     onReadyToggle={onActivityReadyToggle}
                     currency={currency}

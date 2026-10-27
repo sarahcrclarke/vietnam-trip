@@ -10,7 +10,7 @@ import { daysBetween, formatDuration } from "@/lib/duration";
 import { migrateVotes } from "@/lib/voting";
 import { migrateAccommodation } from "@/lib/accommodation";
 import { accommodationNights } from "@/lib/accommodation";
-import { isUuid } from "@/lib/tripData";
+import { isUuid, activityCostColumn } from "@/lib/tripData";
 
 // List-level client state for the itinerary's stops. Initialised from JSON
 // (each stop keeps its stable JSON `id`; new stops get a temporary id). No
@@ -44,7 +44,16 @@ const STOP_FIELD_COLUMNS = {
   accommodationWishlistUrl: ["accommodation_wishlist_url", (v) => (v ? v : null)],
 };
 
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, onPersistActivityReady, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
+// Activity text fields persisted to public.activities: state key -> [column,
+// value conversion]. (Images stay local until the Storage migration.)
+const ACTIVITY_FIELD_COLUMNS = {
+  name: ["name", (v) => v ?? ""],
+  link: ["link", (v) => (v && v.trim() ? v : null)],
+  cost: ["cost", activityCostColumn],
+  travelTime: ["travel_time", (v) => (v && v.trim() ? v : null)],
+};
+
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, onPersistActivityReady, onPersistActivityFields, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -232,6 +241,48 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   const updateJourney = useCallback(
     (id, journey) => setStops((prev) => prev.map((s) => (s.id === id ? { ...s, journey } : s))),
     []
+  );
+
+  // Name / link / cost / travel time of an EXISTING activity: optimistic, then
+  // (Supabase mode, saved activities only — local-only ones have non-UUID ids)
+  // persisted via the debounced field writer. `savedActivityFields` holds each
+  // field's last value known to be in the DB, so a failed write rolls back to
+  // that — but only if the field hasn't been edited again since.
+  const savedActivityFields = useRef(new Map());
+  const updateActivityField = useCallback(
+    (stopId, activityId, key, value) => {
+      const activity = stopsRef.current
+        .find((s) => s.id === stopId)
+        ?.activities.find((a) => a.id === activityId);
+      const patchField = (v, onlyIf) =>
+        setStops((prev) =>
+          prev.map((s) =>
+            s.id !== stopId
+              ? s
+              : {
+                  ...s,
+                  activities: s.activities.map((a) =>
+                    a.id === activityId && (!onlyIf || a[key] === onlyIf.current) ? { ...a, [key]: v } : a
+                  ),
+                }
+          )
+        );
+      patchField(value);
+      if (!onPersistActivityFields || !activity || !isUuid(activityId)) return;
+
+      const savedKey = `${activityId}:${key}`;
+      if (!savedActivityFields.current.has(savedKey)) savedActivityFields.current.set(savedKey, activity[key]);
+      const [column, convert] = ACTIVITY_FIELD_COLUMNS[key];
+      onPersistActivityFields(activityId, { [column]: convert(value) }).then(
+        () => savedActivityFields.current.set(savedKey, value),
+        (err) => {
+          console.error("Activity save failed", err);
+          patchField(savedActivityFields.current.get(savedKey), { current: value });
+          setVoteError("Couldn't save that change. Please try again.");
+        }
+      );
+    },
+    [onPersistActivityFields]
   );
 
   const updateActivities = useCallback(
@@ -551,6 +602,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onPhotoChange={(photo) => updatePhoto(stop.id, photo)}
                   onDateChange={updateDate}
                   onActivitiesChange={(activities) => updateActivities(stop.id, activities)}
+                  onActivityFieldChange={(activityId, key, value) => updateActivityField(stop.id, activityId, key, value)}
                   onActivityVoteToggle={(activityId, travellerId) => toggleActivityVote(stop.id, activityId, travellerId)}
                   onActivityReadyToggle={(activityId) => toggleActivityReady(stop.id, activityId)}
                   onAccommodationsChange={(accommodations) => updateAccommodations(stop.id, accommodations)}

@@ -83,12 +83,15 @@ function toLeg(r) {
 
 // Database image URLs are intentionally null until the Storage migration, so
 // images fall back to the bundled local JSON, matched by stop name (+ activity
-// name within that stop). Temporary: goes away once photo_url/image_url are set.
+// position within that stop). Temporary: goes away once photo_url/image_url are set.
 export function buildItineraryFromRows(rows, localItinerary) {
   const localStops = new Map((localItinerary?.days || []).map((d) => [d.loc, d]));
   const localPhoto = (loc) => localStops.get(loc)?.photo ?? null;
-  const localImage = (loc, name) =>
-    localStops.get(loc)?.activities?.find((a) => a.name === name)?.image ?? null;
+  // Seeded activities have sort_order = their position in the bundled JSON
+  // (supabase/seed-vietnam-trip.sql), so the position — not the name, which
+  // is editable and persisted — finds the bundled image.
+  const localImage = (loc, sortOrder) =>
+    localStops.get(loc)?.activities?.[sortOrder]?.image ?? null;
 
   const days = rows.stops.map((s) => ({
     id: s.id,
@@ -111,7 +114,7 @@ export function buildItineraryFromRows(rows, localItinerary) {
         name: a.name,
         link: a.link || "",
         cost: Number(a.cost),
-        image: a.image_url || localImage(s.loc, a.name),
+        image: a.image_url || localImage(s.loc, a.sort_order),
         travelTime: a.travel_time || "",
         readyToBook: Boolean(a.ready_to_book),
         voteMap: toVoteMap(rows.activityVotes, "activity_id", a.id),
@@ -207,6 +210,64 @@ export function createActivityReadyWriter(supabase) {
     chains.set(activityId, next);
     return next;
   };
+}
+
+// WRITE: an existing activity's own fields — name, link, cost, travel_time
+// (the only activities columns besides ready_to_book that the app may update;
+// column-level grant). Like the stop fields, these inputs fire on every
+// keystroke, so edits are coalesced: save(activityId, columns) merges into one
+// pending patch per activity and writes it after a short pause. Writes for the
+// same activity are chained, so a later patch can never land before an earlier
+// one. save() returns a promise that settles when the batch holding that edit
+// has been written (rejects if it failed; a zero-row update is a failure).
+export function createActivityFieldWriter(supabase, delayMs = 600) {
+  const chains = new Map();
+  const pending = new Map();
+
+  const flush = (activityId) => {
+    const entry = pending.get(activityId);
+    if (!entry) return;
+    pending.delete(activityId);
+    clearTimeout(entry.timer);
+    const run = async () => {
+      const { data, error } = await supabase.from("activities").update(entry.patch).eq("id", activityId).select("id");
+      if (error) throw error;
+      if (!data?.length) throw new Error("Activity not updated"); // RLS filtered it out
+    };
+    const next = (chains.get(activityId) ?? Promise.resolve()).catch(() => {}).then(run);
+    chains.set(activityId, next);
+    next.then(
+      () => entry.waiters.forEach((w) => w.resolve()),
+      (err) => entry.waiters.forEach((w) => w.reject(err))
+    );
+  };
+
+  const flushAll = () => [...pending.keys()].forEach(flush);
+  if (typeof window !== "undefined") {
+    window.addEventListener("pagehide", flushAll);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flushAll();
+    });
+  }
+
+  return (activityId, columns) =>
+    new Promise((resolve, reject) => {
+      const entry = pending.get(activityId) ?? { patch: {}, waiters: [], timer: null };
+      Object.assign(entry.patch, columns);
+      entry.waiters.push({ resolve, reject });
+      clearTimeout(entry.timer);
+      entry.timer = setTimeout(() => flush(activityId), delayMs);
+      pending.set(activityId, entry);
+    });
+}
+
+// The typed cost string -> the numeric(10,2) column. Empty or incomplete input
+// ("", ".") is written as 0 — only the database copy; the input itself keeps
+// whatever is being typed. Out-of-range values are left for the database to
+// reject (the edit then rolls back with the usual message).
+export function activityCostColumn(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0;
 }
 
 // WRITE: accommodation cards (add / edit / remove) in public.accommodations.

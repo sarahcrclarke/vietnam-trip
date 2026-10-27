@@ -15,7 +15,7 @@ import { isUnanimous } from "@/lib/voting";
 // mobile, continuing sideways into a horizontally-scrollable track.
 
 const ActivityGrid = forwardRef(function ActivityGrid(
-  { activities, onChange, onVoteToggle, onReadyToggle, currency, loc, travellers, renderControls },
+  { activities, onChange, onFieldChange, onVoteToggle, onReadyToggle, currency, loc, travellers, renderControls },
   ref
 ) {
   const seq = useRef(0);
@@ -44,13 +44,13 @@ const ActivityGrid = forwardRef(function ActivityGrid(
   // which updates state optimistically and persists the change.
   const toggleVote = (activityId, travellerId) => onVoteToggle(activityId, travellerId);
 
-  const updateCost = (activityId, cost) =>
-    onChange(activities.map((a) => (a.id === activityId ? { ...a, cost } : a)));
+  // name / link / cost / travelTime go through Itinerary's field handler (which
+  // also persists saved activities); the image is still local-only.
+  const updateField = (activityId, key, value) => onFieldChange(activityId, key, value);
 
-  // name/link/travelTime/image share this one patch path — controlled here
-  // (not local to ActivityCard/ActivityFields) so the Votes page's activity
-  // rows, which read straight from this same `activities` array via
-  // Itinerary's `stops`, reflect an edit immediately.
+  // The image (local-only for now) is patched here — controlled (not local to
+  // ActivityCard) so the Votes page's activity rows, which read straight from
+  // this same `activities` array via Itinerary's `stops`, reflect it immediately.
   const patchActivity = (activityId, patch) =>
     onChange(activities.map((a) => (a.id === activityId ? { ...a, ...patch } : a)));
 
@@ -109,10 +109,10 @@ const ActivityGrid = forwardRef(function ActivityGrid(
             unanimous={isUnanimous(activity.votes, voters)}
             onToggleVote={(travellerId) => toggleVote(activity.id, travellerId)}
             onReadyToggle={() => onReadyToggle(activity.id)}
-            onCostChange={(cost) => updateCost(activity.id, cost)}
-            onNameChange={(name) => patchActivity(activity.id, { name })}
-            onLinkChange={(link) => patchActivity(activity.id, { link })}
-            onTravelTimeChange={(travelTime) => patchActivity(activity.id, { travelTime })}
+            onCostChange={(cost) => updateField(activity.id, "cost", cost)}
+            onNameChange={(name) => updateField(activity.id, "name", name)}
+            onLinkChange={(link) => updateField(activity.id, "link", link)}
+            onTravelTimeChange={(travelTime) => updateField(activity.id, "travelTime", travelTime)}
             onImageChange={(image) => patchActivity(activity.id, { image })}
             onRemove={removeActivity}
           />

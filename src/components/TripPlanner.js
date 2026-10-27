@@ -12,7 +12,7 @@ import { INITIAL_TRAVELLERS } from "@/lib/travellers";
 // cost summary rendered at the end of Itinerary reads all three straight
 // from here rather than an independent copy. Client-side only; no
 // persistence, so a refresh restores the JSON/seed values.
-export default function TripPlanner({ itinerary, initialTravellers, onPersistActivityVote, onPersistActivityReady, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
+export default function TripPlanner({ itinerary, initialTravellers, onPersistActivityVote, onPersistActivityReady, onPersistActivityFields, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
   const [depart, setDepart] = useState(itinerary.depart ?? "");
   const [returnDate, setReturnDate] = useState(itinerary.return ?? "");
   const [travellers, setTravellers] = useState(initialTravellers ?? INITIAL_TRAVELLERS);
@@ -64,6 +64,7 @@ export default function TripPlanner({ itinerary, initialTravellers, onPersistAct
         onScrollToStopHandled={() => setScrollToStopId(null)}
         onPersistActivityVote={onPersistActivityVote}
         onPersistActivityReady={onPersistActivityReady}
+        onPersistActivityFields={onPersistActivityFields}
         accommodationWriter={accommodationWriter}
         onPersistAccommodationVote={onPersistAccommodationVote}
         onPersistSelectedAccommodation={onPersistSelectedAccommodation}
