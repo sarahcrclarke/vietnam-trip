@@ -60,13 +60,8 @@ export function accommodationNights(daysBetweenResult) {
   return Number.isInteger(daysBetweenResult) && daysBetweenResult > 0 ? daysBetweenResult : null;
 }
 
-const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
-
-// Whole amounts show without decimals; anything with pence shows 2 places.
-export function formatMoney(n) {
-  const rounded = round2(n);
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
-}
+import { formatMoney } from "@/lib/money";
+export { formatMoney };
 
 const parseAmount = (value) => {
   if (value == null || String(value).trim() === "") return null;

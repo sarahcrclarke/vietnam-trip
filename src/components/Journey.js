@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { TransportIcon, CloseIcon } from "./icons";
+import MoneyInput from "./MoneyInput";
+import { formatMoneyInput } from "@/lib/money";
 
 const COST_RE = /^\d*\.?\d{0,2}$/;
 
@@ -322,9 +324,9 @@ function LegRow({ leg, currency, travellers, isFirstRow, isLastRow, onUpdate, on
             <span className="text-xs">{currency}</span>
             <span className="inline-grid">
               <span className="invisible col-start-1 row-start-1 whitespace-pre text-sm">
-                {leg.cost || "0"}
+                {formatMoneyInput(leg.cost) || "0"}
               </span>
-              <input
+              <MoneyInput
                 type="text"
                 inputMode="decimal"
                 size={1}

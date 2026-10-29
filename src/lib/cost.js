@@ -27,9 +27,4 @@ export function destinationBreakdown(stop) {
   return { accommodation, activities, total: accommodation + activities, priceNeeded };
 }
 
-// Whole £ amounts show without decimals, matching the rest of the UI; a
-// value with pence always shows exactly 2 decimal places.
-export function formatMoney(n) {
-  const rounded = Math.round(n * 100) / 100;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
-}
+export { formatMoney } from "@/lib/money";

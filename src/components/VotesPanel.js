@@ -5,6 +5,7 @@ import VoteDecisionRow from "./VoteDecisionRow";
 import VoteDestinationGroup from "./VoteDestinationGroup";
 import { isUnanimous } from "@/lib/voting";
 import { accommodationTotalPrice } from "@/lib/accommodation";
+import { formatMoney } from "@/lib/money";
 
 const PICKS_INITIAL = 6;
 const CONTENDERS_INITIAL = 5;
@@ -181,7 +182,7 @@ export default function VotesPanel({
                       kind="accommodation"
                       image={acc.image}
                       title={acc.name}
-                      meta={total > 0 ? `${currency}${total} total` : null}
+                      meta={total > 0 ? `${currency}${formatMoney(total)} total` : null}
                       unanimous={isUnanimous(acc.votes || {}, voters)}
                       ready={stop.selectedAccommodationId === acc.id}
                       voters={voters}

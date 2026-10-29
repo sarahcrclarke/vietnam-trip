@@ -1,6 +1,7 @@
 "use client";
 
 import { ClockIcon, ExternalLinkIcon } from "./icons";
+import MoneyInput from "./MoneyInput";
 
 // Non-negative monetary value: empty, or digits with up to 2 decimals.
 // Blocks letters, negatives, and malformed numbers so "abc" can never
@@ -85,7 +86,7 @@ export default function ActivityFields({ link, cost, onCostChange, onLinkChange,
         <span className={hasCost ? "font-semibold text-rust" : "text-stone/30"}>
           {currency}
         </span>
-        <input
+        <MoneyInput
           type="text"
           inputMode="decimal"
           value={costVal}

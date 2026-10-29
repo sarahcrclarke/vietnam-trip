@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CameraIcon } from "./icons";
 import AccommodationVotes from "./AccommodationVotes";
 import ReadyToBookButton from "./ReadyToBookButton";
+import MoneyInput from "./MoneyInput";
 import { derivePricePerNight, deriveTotalPrice, pricePerPerson, formatMoney } from "@/lib/accommodation";
 
 const displayMoney = (v) => (Number.isFinite(Number(v)) ? formatMoney(Number(v)) : v);
@@ -19,8 +20,8 @@ export default function AccommodationCard({ accommodation, currency, voters, una
   const [nameVal, setNameVal] = useState(name || "");
   const [typeVal, setTypeVal] = useState(type || "");
   const [locationVal, setLocationVal] = useState(location || "");
-  const [pricePerNightVal, setPricePerNightVal] = useState(pricePerNight ? String(pricePerNight) : "");
-  const [totalPriceVal, setTotalPriceVal] = useState(totalPrice ? String(totalPrice) : "");
+  const [pricePerNightVal, setPricePerNightVal] = useState(pricePerNight != null ? String(pricePerNight) : "");
+  const [totalPriceVal, setTotalPriceVal] = useState(totalPrice != null ? String(totalPrice) : "");
   const [ratingVal, setRatingVal] = useState(rating ? String(rating) : "");
   const [reviewCountVal, setReviewCountVal] = useState(reviewCount ? String(reviewCount) : "");
   const [linkVal, setLinkVal] = useState(link || "");
@@ -113,8 +114,8 @@ export default function AccommodationCard({ accommodation, currency, voters, una
     setNameVal(name || "");
     setTypeVal(type || "");
     setLocationVal(location || "");
-    setPricePerNightVal(pricePerNight ? String(pricePerNight) : "");
-    setTotalPriceVal(totalPrice ? String(totalPrice) : "");
+    setPricePerNightVal(pricePerNight != null ? String(pricePerNight) : "");
+    setTotalPriceVal(totalPrice != null ? String(totalPrice) : "");
     setRatingVal(rating ? String(rating) : "");
     setReviewCountVal(reviewCount ? String(reviewCount) : "");
     setLinkVal(link || "");
@@ -198,7 +199,7 @@ export default function AccommodationCard({ accommodation, currency, voters, una
         <div className="grid grid-cols-2 gap-2">
           <div>
             <span className="block text-[10px] uppercase tracking-wide text-stone/40">Price/night</span>
-            <input
+            <MoneyInput
               type="text"
               inputMode="decimal"
               value={pricePerNightVal}
@@ -209,7 +210,7 @@ export default function AccommodationCard({ accommodation, currency, voters, una
           </div>
           <div>
             <span className="block text-[10px] uppercase tracking-wide text-stone/40">Total price</span>
-            <input
+            <MoneyInput
               type="text"
               inputMode="decimal"
               value={totalPriceVal}
@@ -378,7 +379,7 @@ export default function AccommodationCard({ accommodation, currency, voters, una
         </div>
       )}
 
-      {pricePerNightVal && (
+      {pricePerNightVal !== "" && (
         <div className="mt-2 flex items-baseline gap-1 font-semibold text-rust">
           <span className="text-xs">{currency}</span>
           <span className="text-base">{displayMoney(pricePerNightVal)}</span>
@@ -386,7 +387,7 @@ export default function AccommodationCard({ accommodation, currency, voters, una
         </div>
       )}
 
-      {totalPriceVal && (
+      {totalPriceVal !== "" && (
         <div className="mt-1 text-xs text-stone/60">
           {currency}{displayMoney(totalPriceVal)} total
           {pricePerPerson(totalPriceVal, includedCount) != null && (

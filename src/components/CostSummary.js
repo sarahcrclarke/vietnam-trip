@@ -1,6 +1,7 @@
 "use client";
 
 import { destinationBreakdown, formatMoney } from "@/lib/cost";
+import MoneyInput from "./MoneyInput";
 
 const COST_RE = /^\d*\.?\d{0,2}$/;
 
@@ -64,7 +65,7 @@ export default function CostSummary({ stops, extraCosts, onExtraCostsChange, tra
           </div>
           <p className="font-sans text-sm text-muted">
             {perPerson != null
-              ? `${currency}${perPerson.toFixed(2)} per person · ${includedCount} ${includedCount === 1 ? "traveller" : "travellers"}`
+              ? `${currency}${formatMoney(perPerson)} per person · ${includedCount} ${includedCount === 1 ? "traveller" : "travellers"}`
               : "—"}
           </p>
         </div>
@@ -135,14 +136,14 @@ export default function CostSummary({ stops, extraCosts, onExtraCostsChange, tra
               />
               <span className="flex flex-none items-baseline gap-0.5 font-sans text-sm font-medium text-rust">
                 <span className="text-xs">{currency}</span>
-                <input
+                <MoneyInput
                   type="text"
                   inputMode="decimal"
                   value={extra.amount}
                   onChange={(e) => onAmountChange(extra.id, e.target.value)}
                   placeholder="0"
                   aria-label="Extra cost amount"
-                  className="w-12 bg-transparent text-right placeholder:text-rust/40 focus:outline-none focus:ring-1 focus:ring-forest/25 rounded-sm px-1 -mx-1"
+                  className="w-16 bg-transparent text-right placeholder:text-rust/40 focus:outline-none focus:ring-1 focus:ring-forest/25 rounded-sm px-1 -mx-1"
                 />
               </span>
               <button
