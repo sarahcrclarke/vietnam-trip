@@ -674,8 +674,8 @@ grant insert, update, delete on public.accommodations to authenticated;
 grant update (ready_to_book) on public.activities to authenticated;
 
 -- Edits to EXISTING activities: name, link, cost and travel time, again as
--- column-level grants. image_url, stop_id and sort_order stay read-only on
--- UPDATE. Membership RLS still applies.
+-- column-level grants. stop_id and sort_order stay read-only on UPDATE
+-- (image_url is granted separately, in the image section below). Membership RLS still applies.
 grant update (name, link, cost, travel_time) on public.activities to authenticated;
 
 -- Adding and deleting activities. INSERT is column-level too: only the columns
@@ -702,7 +702,7 @@ grant update (selected_accommodation_id) on public.stops to authenticated;
 
 -- Stop details (destination name, description, date and the Airbnb wishlist
 -- URL): the app may also update exactly these four columns, again
--- column-level. Everything else on stops (trip_id, sort_order, photo_url, ...)
+-- column-level. Everything else on stops (trip_id, sort_order, ...)
 -- stays read-only, and membership RLS still applies to every write.
 -- stops.cost is DEPRECATED: a destination's total is now calculated in the app
 -- from the selected stay + Ready-to-book activities, so cost is not writable.
@@ -711,6 +711,16 @@ grant update (selected_accommodation_id) on public.stops to authenticated;
 grant update (loc, description, date, accommodation_wishlist_url) on public.stops to authenticated;
 revoke update (cost) on public.stops from authenticated;
 comment on column public.stops.cost is 'DEPRECATED, unused. Destination totals are calculated in the app (selected stay total + Ready-to-book activity costs); nothing reads or writes this column.';
+
+-- Image columns (Storage migration). Each holds a trip-photos object path
+-- (`<trip_id>/...`), never a URL or image bytes. The app may update exactly
+-- these three columns, again column-level, so nothing else on trips / stops /
+-- activities becomes writable. accommodations.image_url needs nothing here: it
+-- is already covered by the table-level update grant on accommodations above.
+-- Membership RLS ("trip members full access") still applies to every write.
+grant update (hero_photo_url) on public.trips to authenticated;
+grant update (photo_url) on public.stops to authenticated;
+grant update (image_url) on public.activities to authenticated;
 
 
 -- ----------------------------------------------------------------------------

@@ -11,6 +11,7 @@ import { migrateVotes } from "@/lib/voting";
 import { migrateAccommodation } from "@/lib/accommodation";
 import { accommodationNights } from "@/lib/accommodation";
 import { isUuid, activityCostColumn, newActivityId, nextActivitySortOrder } from "@/lib/tripData";
+import { isSignedStorageUrl, SIGNED_URL_REFRESH_MS } from "@/lib/imageStorage";
 
 // List-level client state for the itinerary's stops. Initialised from JSON
 // (each stop keeps its stable JSON `id`; new stops get a temporary id). No
@@ -53,7 +54,7 @@ const ACTIVITY_FIELD_COLUMNS = {
   travelTime: ["travel_time", (v) => (v && v.trim() ? v : null)],
 };
 
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, onPersistActivityReady, onPersistActivityFields, onPersistActivityAdd, onPersistActivityRemove, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onRefreshImageUrls, onPersistActivityVote, onPersistActivityReady, onPersistActivityFields, onPersistActivityAdd, onPersistActivityRemove, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -86,6 +87,56 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
   useEffect(() => {
     stopsRef.current = stops;
   }, [stops]);
+  // Signed image URLs expire (an hour), so re-sign the Storage-backed images
+  // shortly before that, while the tab is visible, and when the tab comes back
+  // after being away long enough. Only the display URL is swapped, and only on
+  // values that are still a signed URL (a local replacement image is left
+  // alone). A failed refresh keeps the current URLs; nothing happens when no
+  // image is Storage-backed.
+  useEffect(() => {
+    if (!onRefreshImageUrls) return undefined;
+    let lastSigned = Date.now();
+    let busy = false;
+    const refresh = async () => {
+      if (busy) return;
+      const paths = new Set();
+      for (const s of stopsRef.current) {
+        if (s.photoPath) paths.add(s.photoPath);
+        s.activities.forEach((a) => a.imagePath && paths.add(a.imagePath));
+        s.accommodations.forEach((a) => a.imagePath && paths.add(a.imagePath));
+      }
+      if (paths.size === 0) return;
+      busy = true;
+      try {
+        const urls = await onRefreshImageUrls([...paths]);
+        if (urls.size === 0) return;
+        lastSigned = Date.now();
+        const next = (path, current) => (path && urls.has(path) && isSignedStorageUrl(current) ? urls.get(path) : current);
+        setStops((prev) =>
+          prev.map((s) => ({
+            ...s,
+            photo: next(s.photoPath, s.photo),
+            activities: s.activities.map((a) => ({ ...a, image: next(a.imagePath, a.image) })),
+            accommodations: s.accommodations.map((a) => ({ ...a, image: next(a.imagePath, a.image) })),
+          }))
+        );
+      } finally {
+        busy = false;
+      }
+    };
+    const stale = () => Date.now() - lastSigned >= SIGNED_URL_REFRESH_MS;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible" && stale()) refresh();
+    }, 60 * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && stale()) refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [onRefreshImageUrls]);
   useEffect(() => {
     if (!voteError) return undefined;
     const t = setTimeout(() => setVoteError(null), 4000);

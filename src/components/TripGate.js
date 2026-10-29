@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import TripPlanner from "./TripPlanner";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { signStoragePaths } from "@/lib/imageStorage";
 import {
   buildItineraryFromRows,
   buildTravellersFromRows,
@@ -16,6 +17,7 @@ import {
   createSelectedAccommodationWriter,
   createStopFieldWriter,
   createAccommodationVoteWriter,
+  collectImagePaths,
   fetchTripRows,
   joinTrip,
 } from "@/lib/tripData";
@@ -43,6 +45,9 @@ export default function TripGate({ localItinerary }) {
 
   const loadTrip = async (supabase) => {
     const rows = await fetchTripRows(supabase);
+    // Private Storage paths -> signed display URLs, one batched request (never
+    // throws; unsigned images just use the bundled fallback).
+    const signedUrls = await signStoragePaths(supabase, collectImagePaths(rows));
     const accommodationWriter = createAccommodationWriter(supabase);
     const writeAccommodationVote = createAccommodationVoteWriter(supabase);
     const writeSelectedAccommodation = createSelectedAccommodationWriter(supabase);
@@ -53,7 +58,8 @@ export default function TripGate({ localItinerary }) {
     const activityWriter = createActivityWriter(supabase, activityQueue);
     const writeActivityFields = createActivityFieldWriter(supabase, 600, activityQueue);
     setTrip({
-      itinerary: buildItineraryFromRows(rows, localItinerary),
+      itinerary: buildItineraryFromRows(rows, localItinerary, signedUrls),
+      refreshImageUrls: (paths) => signStoragePaths(supabase, paths),
       travellers: buildTravellersFromRows(rows),
       persistActivityVote: (activityId, travellerId, selected) =>
         activityQueue.ready(activityId).then(() => writeActivityVote(activityId, travellerId, selected)),
@@ -131,6 +137,7 @@ export default function TripGate({ localItinerary }) {
       <TripPlanner
         itinerary={trip.itinerary}
         initialTravellers={trip.travellers}
+        onRefreshImageUrls={trip.refreshImageUrls}
         onPersistActivityVote={trip.persistActivityVote}
         onPersistActivityReady={trip.persistActivityReady}
         onPersistActivityFields={trip.persistActivityFields}

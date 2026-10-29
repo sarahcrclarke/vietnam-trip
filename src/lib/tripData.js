@@ -1,5 +1,6 @@
 import { TRIP_ID } from "./tripConfig";
 import { newAccommodationId } from "./accommodation";
+import { isStoragePath, resolveStoredImage } from "./imageStorage";
 
 // READ-ONLY access layer: membership check, join, and fetching the trip's
 // relational rows, plus an adapter that reshapes those rows into the
@@ -82,10 +83,27 @@ function toLeg(r) {
   };
 }
 
-// Database image URLs are intentionally null until the Storage migration, so
-// images fall back to the bundled local JSON, matched by stop name (+ activity
-// position within that stop). Temporary: goes away once photo_url/image_url are set.
-export function buildItineraryFromRows(rows, localItinerary) {
+// Every private Storage path currently held in an image column, for one
+// batched signing request. Null / legacy values are ignored.
+export function collectImagePaths(rows) {
+  const values = [
+    rows.trip.hero_photo_url,
+    ...rows.stops.map((s) => s.photo_url),
+    ...rows.activities.map((a) => a.image_url),
+    ...rows.accommodations.map((a) => a.image_url),
+  ];
+  return [...new Set(values.filter(isStoragePath))];
+}
+
+// Image columns hold a Storage path (shown via its signed URL; `signedUrls` is
+// path -> URL), a legacy URL (used as-is) or null. Where there's no usable
+// stored image — null, or a path that couldn't be signed — images fall back to
+// the bundled local JSON, matched by stop name (+ activity position within that
+// stop). Temporary: the fallback goes away once every row has a verified path.
+// The display value stays in `photo` / `image` (what components render); the
+// stored path is kept alongside in `photoPath` / `imagePath` / `heroPhotoPath`.
+export function buildItineraryFromRows(rows, localItinerary, signedUrls = new Map()) {
+  const stored = (value) => resolveStoredImage(value, signedUrls);
   const localStops = new Map((localItinerary?.days || []).map((d) => [d.loc, d]));
   const localPhoto = (loc) => localStops.get(loc)?.photo ?? null;
   // Seeded activities have sort_order = their position in the bundled JSON
@@ -102,7 +120,8 @@ export function buildItineraryFromRows(rows, localItinerary) {
     date: s.date || "",
     desc: s.description || "",
     tag: "",
-    photo: s.photo_url || localPhoto(s.loc),
+    photo: stored(s.photo_url).url || localPhoto(s.loc),
+    photoPath: stored(s.photo_url).path,
     journey: rows.journey
       .filter((j) => j.stop_id === s.id)
       .map((j) =>
@@ -117,7 +136,8 @@ export function buildItineraryFromRows(rows, localItinerary) {
         name: a.name,
         link: a.link || "",
         cost: Number(a.cost),
-        image: a.image_url || localImage(s.loc, a.sort_order),
+        image: stored(a.image_url).url || localImage(s.loc, a.sort_order),
+        imagePath: stored(a.image_url).path,
         travelTime: a.travel_time || "",
         readyToBook: Boolean(a.ready_to_book),
         sortOrder: a.sort_order,
@@ -130,7 +150,8 @@ export function buildItineraryFromRows(rows, localItinerary) {
         name: a.name,
         type: a.type,
         location: a.location,
-        image: a.image_url || null,
+        image: stored(a.image_url).url,
+        imagePath: stored(a.image_url).path,
         pricePerNight: a.price_per_night == null ? null : Number(a.price_per_night),
         totalPrice: a.total_price == null ? null : Number(a.total_price),
         rating: a.rating == null ? null : Number(a.rating),
@@ -149,7 +170,8 @@ export function buildItineraryFromRows(rows, localItinerary) {
     depart: rows.trip.depart,
     return: rows.trip.return_date,
     currency: rows.trip.currency,
-    heroPhoto: rows.trip.hero_photo_url || localItinerary?.heroPhoto || null,
+    heroPhoto: stored(rows.trip.hero_photo_url).url || localItinerary?.heroPhoto || null,
+    heroPhotoPath: stored(rows.trip.hero_photo_url).path,
     extraCosts: rows.extraCosts.map((e) => ({ id: e.id, label: e.label, cost: Number(e.amount) })),
     days,
   };
