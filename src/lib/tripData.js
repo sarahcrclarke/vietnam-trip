@@ -135,7 +135,7 @@ export function buildItineraryFromRows(rows, localItinerary, signedUrls = new Ma
         id: a.id,
         name: a.name,
         link: a.link || "",
-        cost: Number(a.cost),
+        cost: a.cost == null ? null : Number(a.cost), // null = no price, 0 = free
         image: stored(a.image_url).url || localImage(s.loc, a.sort_order),
         imagePath: stored(a.image_url).path,
         travelTime: a.travel_time || "",
@@ -428,12 +428,13 @@ export function createActivityFieldWriter(supabase, delayMs = 600, queue = creat
 }
 
 // The typed cost string -> the numeric(10,2) column. Empty or incomplete input
-// ("", ".") is written as 0 — only the database copy; the input itself keeps
-// whatever is being typed. Out-of-range values are left for the database to
-// reject (the edit then rolls back with the usual message).
+// ("", ".") is written as NULL: no price entered. An explicit "0" is written as
+// 0, meaning free. Only the database copy; the input keeps whatever is being
+// typed. Out-of-range values are left for the database to reject.
 export function activityCostColumn(value) {
+  if (value == null || String(value).trim() === "") return null;
   const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0;
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
 }
 
 // WRITE: accommodation cards (add / edit / remove) in public.accommodations.

@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { ClockIcon, ExternalLinkIcon } from "./icons";
 import MoneyInput from "./MoneyInput";
+import { isFreeActivityCost } from "@/lib/money";
 
 // Non-negative monetary value: empty, or digits with up to 2 decimals.
 // Blocks letters, negatives, and malformed numbers so "abc" can never
@@ -48,6 +50,10 @@ export default function ActivityFields({ link, cost, onCostChange, onLinkChange,
   const hasCost = costVal !== "";
   const hasTravelTime = travelTimeVal !== "";
   const openUrl = hasLink ? normalizeUrl(linkVal) : null;
+  // An explicitly saved 0 is a FREE activity: shown as a label, and clicking it
+  // opens the normal cost input again. A blank cost keeps the placeholder.
+  const isFree = isFreeActivityCost(costVal);
+  const [editingCost, setEditingCost] = useState(false);
 
   return (
     <div className="mt-1 space-y-0.5">
@@ -82,6 +88,18 @@ export default function ActivityFields({ link, cost, onCostChange, onLinkChange,
       </p>
 
       {/* Cost — £ kept visually separate from the editable numeric value. */}
+      {isFree && !editingCost ? (
+        <p className="text-xs">
+          <button
+            type="button"
+            onClick={() => setEditingCost(true)}
+            aria-label="Free activity. Edit cost"
+            className="font-semibold text-rust transition-colors hover:text-rust/80"
+          >
+            Free activity
+          </button>
+        </p>
+      ) : (
       <p className="flex items-baseline gap-0.5 text-xs">
         <span className={hasCost ? "font-semibold text-rust" : "text-stone/30"}>
           {currency}
@@ -91,6 +109,8 @@ export default function ActivityFields({ link, cost, onCostChange, onLinkChange,
           inputMode="decimal"
           value={costVal}
           onChange={handleCostChange}
+          onBlur={() => setEditingCost(false)}
+          autoFocus={editingCost}
           placeholder="cost"
           aria-label="Activity cost"
           className={`w-full rounded-sm bg-transparent focus:outline-none focus-visible:ring-1 focus-visible:ring-forest/30 ${
@@ -100,6 +120,7 @@ export default function ActivityFields({ link, cost, onCostChange, onLinkChange,
           }`}
         />
       </p>
+      )}
 
       {/* Travel time from accommodation — free text, optional. */}
       <p className="flex items-center gap-1 text-xs">

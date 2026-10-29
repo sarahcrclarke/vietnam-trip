@@ -17,3 +17,11 @@ export function formatMoneyInput(value) {
   if (text.trim() === "" || !Number.isFinite(Number(text))) return text;
   return formatMoney(text);
 }
+
+// Activity cost in editable state: "" = no price entered (null in the
+// database); a numeric 0 stays "0" so it survives reload as an explicit free
+// activity rather than being treated as blank.
+export const activityCostToInput = (value) => (value == null ? "" : String(Number(value)));
+
+// True only for an explicitly entered zero (not blank, not missing).
+export const isFreeActivityCost = (input) => typeof input === "string" && input.trim() !== "" && Number(input) === 0;

@@ -262,7 +262,7 @@ create table if not exists public.activities (
   stop_id      uuid not null references public.stops(id) on delete cascade,
   name         text not null default '',
   link         text,
-  cost         numeric(10,2) not null default 0 check (cost >= 0),
+  cost         numeric(10,2) check (cost is null or cost >= 0), -- null = no price entered; 0 = free
   image_url    text,
   travel_time  text,
   ready_to_book boolean not null default false,
@@ -277,6 +277,12 @@ comment on table public.activities is 'Things-to-do options for one stop.';
 -- existed, `create table if not exists` above is a no-op, so add it here too.
 alter table public.activities
   add column if not exists ready_to_book boolean not null default false;
+-- Activity cost: null = no price entered, 0 = explicitly free. Existing databases
+-- are changed by supabase/migrations/16_activity_cost_nullable.sql (run once).
+alter table public.activities alter column cost drop not null;
+alter table public.activities alter column cost set default null;
+comment on column public.activities.cost is 'Whole-group price. NULL = no price entered yet; 0 = explicitly free.';
+
 comment on column public.activities.ready_to_book is 'Final decision that the group is doing/booking this activity. Independent of activity_votes (preference). Several activities per stop may be ready; their costs count toward the destination total.';
 
 -- --- activity_votes --------------------------------------------------------

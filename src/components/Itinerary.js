@@ -11,6 +11,7 @@ import { migrateVotes } from "@/lib/voting";
 import { migrateAccommodation } from "@/lib/accommodation";
 import { accommodationNights } from "@/lib/accommodation";
 import { isUuid, activityCostColumn, newActivityId, nextActivitySortOrder } from "@/lib/tripData";
+import { activityCostToInput } from "@/lib/money";
 import { ImageUploadError, isSignedStorageUrl, processImageFile, SIGNED_URL_REFRESH_MS } from "@/lib/imageStorage";
 
 // List-level client state for the itinerary's stops. Initialised from JSON
@@ -71,7 +72,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
         journey: journey ?? transitToJourney(transit, travellers),
         activities: activities.map(({ voteMap, ...a }) => ({
           ...a,
-          cost: a.cost ? String(a.cost) : "",
+          cost: activityCostToInput(a.cost),
           readyToBook: Boolean(a.readyToBook),
           votes: voteMap ?? migrateVotes(a.votes),
         })),
