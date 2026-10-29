@@ -1,4 +1,5 @@
 import { TRIP_ID } from "./tripConfig";
+import { newAccommodationId } from "./accommodation";
 
 // READ-ONLY access layer: membership check, join, and fetching the trip's
 // relational rows, plus an adapter that reshapes those rows into the
@@ -90,8 +91,10 @@ export function buildItineraryFromRows(rows, localItinerary) {
   // Seeded activities have sort_order = their position in the bundled JSON
   // (supabase/seed-vietnam-trip.sql), so the position — not the name, which
   // is editable and persisted — finds the bundled image.
+  // Activities added in the app are numbered from NEW_ACTIVITY_SORT_BASE up, so
+  // they can never land on a bundled position and inherit a seeded image.
   const localImage = (loc, sortOrder) =>
-    localStops.get(loc)?.activities?.[sortOrder]?.image ?? null;
+    sortOrder < NEW_ACTIVITY_SORT_BASE ? localStops.get(loc)?.activities?.[sortOrder]?.image ?? null : null;
 
   const days = rows.stops.map((s) => ({
     id: s.id,
@@ -117,6 +120,7 @@ export function buildItineraryFromRows(rows, localItinerary) {
         image: a.image_url || localImage(s.loc, a.sort_order),
         travelTime: a.travel_time || "",
         readyToBook: Boolean(a.ready_to_book),
+        sortOrder: a.sort_order,
         voteMap: toVoteMap(rows.activityVotes, "activity_id", a.id),
       })),
     accommodations: rows.accommodations
@@ -189,15 +193,69 @@ export function createActivityVoteWriter(supabase) {
   };
 }
 
+// New activities are numbered from here up (existing ones are 0..n from the
+// seed), so a new row always sorts after every seeded one, stays in creation
+// order, and never collides with a seeded position after deletes.
+export const NEW_ACTIVITY_SORT_BASE = 1000;
+export const nextActivitySortOrder = (activities) =>
+  Math.max(NEW_ACTIVITY_SORT_BASE - 1, ...activities.map((a) => (Number.isInteger(a.sortOrder) ? a.sortOrder : -1))) + 1;
+export const newActivityId = newAccommodationId; // activities.id is a uuid too
+
+// Per-activity write ordering shared by every write that targets one
+// activity row (insert, ready flag, field edits, delete): run(id, fn) chains fn
+// after whatever is already pending for that id, and ready(id) resolves
+// (never rejects) once everything queued so far has finished — so a vote, a
+// ready toggle or an edit made straight after adding an activity waits for its
+// INSERT, and a delete waits for any write still in flight.
+export function createActivityQueue() {
+  const chains = new Map();
+  return {
+    run(id, fn) {
+      const next = (chains.get(id) ?? Promise.resolve()).catch(() => {}).then(fn);
+      chains.set(id, next);
+      return next;
+    },
+    ready: (id) => (chains.get(id) ?? Promise.resolve()).catch(() => {}),
+  };
+}
+
+// WRITE: adding / deleting an activity row in public.activities. Insert writes
+// only the columns granted for INSERT (image_url is never written); delete
+// treats a zero-row result as a failure. The activity_votes rows of a deleted
+// activity go with it (ON DELETE CASCADE).
+export function createActivityWriter(supabase, queue = createActivityQueue()) {
+  return {
+    insert: (stopId, activity) =>
+      queue.run(activity.id, async () => {
+        const { error } = await supabase.from("activities").insert({
+          id: activity.id,
+          stop_id: stopId,
+          name: activity.name || "",
+          link: activity.link && activity.link.trim() ? activity.link : null,
+          cost: activityCostColumn(activity.cost),
+          travel_time: activity.travelTime && activity.travelTime.trim() ? activity.travelTime : null,
+          sort_order: activity.sortOrder,
+          ready_to_book: Boolean(activity.readyToBook),
+        });
+        if (error) throw error;
+      }),
+    remove: (id) =>
+      queue.run(id, async () => {
+        const { data, error } = await supabase.from("activities").delete().eq("id", id).select("id");
+        if (error) throw error;
+        if (!data?.length) throw new Error("Activity not deleted"); // RLS filtered it out / already gone
+      }),
+  };
+}
+
 // WRITE: an activity's Ready to book flag — the only column the app may update
 // on public.activities (column-level grant). Several activities per stop can be
 // ready, so unlike the selected stay there is no per-stop state: writes are
 // chained per activity so rapid on/off clicks land in order. A zero-row update
 // (RLS filtered it out, or the row doesn't exist) is a failure.
-export function createActivityReadyWriter(supabase) {
-  const chains = new Map();
-  return (activityId, ready) => {
-    const run = async () => {
+export function createActivityReadyWriter(supabase, queue = createActivityQueue()) {
+  return (activityId, ready) =>
+    queue.run(activityId, async () => {
       const { data, error } = await supabase
         .from("activities")
         .update({ ready_to_book: Boolean(ready) })
@@ -205,11 +263,7 @@ export function createActivityReadyWriter(supabase) {
         .select("id");
       if (error) throw error;
       if (!data?.length) throw new Error("Activity not updated");
-    };
-    const next = (chains.get(activityId) ?? Promise.resolve()).catch(() => {}).then(run);
-    chains.set(activityId, next);
-    return next;
-  };
+    });
 }
 
 // WRITE: an existing activity's own fields — name, link, cost, travel_time
@@ -220,8 +274,7 @@ export function createActivityReadyWriter(supabase) {
 // same activity are chained, so a later patch can never land before an earlier
 // one. save() returns a promise that settles when the batch holding that edit
 // has been written (rejects if it failed; a zero-row update is a failure).
-export function createActivityFieldWriter(supabase, delayMs = 600) {
-  const chains = new Map();
+export function createActivityFieldWriter(supabase, delayMs = 600, queue = createActivityQueue()) {
   const pending = new Map();
 
   const flush = (activityId) => {
@@ -229,13 +282,11 @@ export function createActivityFieldWriter(supabase, delayMs = 600) {
     if (!entry) return;
     pending.delete(activityId);
     clearTimeout(entry.timer);
-    const run = async () => {
+    const next = queue.run(activityId, async () => {
       const { data, error } = await supabase.from("activities").update(entry.patch).eq("id", activityId).select("id");
       if (error) throw error;
       if (!data?.length) throw new Error("Activity not updated"); // RLS filtered it out
-    };
-    const next = (chains.get(activityId) ?? Promise.resolve()).catch(() => {}).then(run);
-    chains.set(activityId, next);
+    });
     next.then(
       () => entry.waiters.forEach((w) => w.resolve()),
       (err) => entry.waiters.forEach((w) => w.reject(err))
@@ -250,7 +301,7 @@ export function createActivityFieldWriter(supabase, delayMs = 600) {
     });
   }
 
-  return (activityId, columns) =>
+  const save = (activityId, columns) =>
     new Promise((resolve, reject) => {
       const entry = pending.get(activityId) ?? { patch: {}, waiters: [], timer: null };
       Object.assign(entry.patch, columns);
@@ -259,6 +310,16 @@ export function createActivityFieldWriter(supabase, delayMs = 600) {
       entry.timer = setTimeout(() => flush(activityId), delayMs);
       pending.set(activityId, entry);
     });
+  // The activity is being deleted: drop its not-yet-written edits (they would
+  // only hit a row that no longer exists).
+  save.discard = (activityId) => {
+    const entry = pending.get(activityId);
+    if (!entry) return;
+    pending.delete(activityId);
+    clearTimeout(entry.timer);
+    entry.waiters.forEach((w) => w.resolve());
+  };
+  return save;
 }
 
 // The typed cost string -> the numeric(10,2) column. Empty or incomplete input

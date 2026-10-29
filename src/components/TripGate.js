@@ -10,6 +10,8 @@ import {
   createActivityVoteWriter,
   createActivityReadyWriter,
   createActivityFieldWriter,
+  createActivityQueue,
+  createActivityWriter,
   createAccommodationWriter,
   createSelectedAccommodationWriter,
   createStopFieldWriter,
@@ -44,12 +46,24 @@ export default function TripGate({ localItinerary }) {
     const accommodationWriter = createAccommodationWriter(supabase);
     const writeAccommodationVote = createAccommodationVoteWriter(supabase);
     const writeSelectedAccommodation = createSelectedAccommodationWriter(supabase);
+    // One queue per activity row: a vote / ready toggle / edit made right after
+    // adding an activity waits for its INSERT; a delete waits for writes in flight.
+    const activityQueue = createActivityQueue();
+    const writeActivityVote = createActivityVoteWriter(supabase);
+    const activityWriter = createActivityWriter(supabase, activityQueue);
+    const writeActivityFields = createActivityFieldWriter(supabase, 600, activityQueue);
     setTrip({
       itinerary: buildItineraryFromRows(rows, localItinerary),
       travellers: buildTravellersFromRows(rows),
-      persistActivityVote: createActivityVoteWriter(supabase),
-      persistActivityReady: createActivityReadyWriter(supabase),
-      persistActivityFields: createActivityFieldWriter(supabase),
+      persistActivityVote: (activityId, travellerId, selected) =>
+        activityQueue.ready(activityId).then(() => writeActivityVote(activityId, travellerId, selected)),
+      persistActivityReady: createActivityReadyWriter(supabase, activityQueue),
+      persistActivityFields: writeActivityFields,
+      persistActivityAdd: activityWriter.insert,
+      persistActivityRemove: (activityId) => {
+        writeActivityFields.discard(activityId);
+        return activityWriter.remove(activityId);
+      },
       accommodationWriter,
       // A vote waits for its card's own add/edit to finish so the row exists.
       persistAccommodationVote: (accommodationId, travellerId, selected) =>
@@ -120,6 +134,8 @@ export default function TripGate({ localItinerary }) {
         onPersistActivityVote={trip.persistActivityVote}
         onPersistActivityReady={trip.persistActivityReady}
         onPersistActivityFields={trip.persistActivityFields}
+        onPersistActivityAdd={trip.persistActivityAdd}
+        onPersistActivityRemove={trip.persistActivityRemove}
         accommodationWriter={trip.accommodationWriter}
         onPersistAccommodationVote={trip.persistAccommodationVote}
         onPersistSelectedAccommodation={trip.persistSelectedAccommodation}

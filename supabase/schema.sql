@@ -669,15 +669,22 @@ grant insert, delete on public.activity_votes to authenticated;
 grant insert, update, delete on public.accommodations to authenticated;
 
 -- Activity "Ready to book": a COLUMN-level grant on activities.ready_to_book,
--- so nothing else on activities is writable by it. No INSERT/DELETE on activities, nothing to
--- anon/public. The "trip members full access" policy on activities still
+-- so nothing else on activities is writable by it. Nothing to anon/public. The "trip members full access" policy on activities still
 -- applies (membership required).
 grant update (ready_to_book) on public.activities to authenticated;
 
 -- Edits to EXISTING activities: name, link, cost and travel time, again as
--- column-level grants. image_url, stop_id and sort_order stay read-only, and
--- there is still no INSERT/DELETE on activities. Membership RLS still applies.
+-- column-level grants. image_url, stop_id and sort_order stay read-only on
+-- UPDATE. Membership RLS still applies.
 grant update (name, link, cost, travel_time) on public.activities to authenticated;
+
+-- Adding and deleting activities. INSERT is column-level too: only the columns
+-- the app supplies (image_url is never written; created_at/updated_at/
+-- updated_by use their defaults). DELETE removes the row and, through the
+-- existing ON DELETE CASCADE, its activity_votes. Membership RLS ("trip
+-- members full access" — USING and WITH CHECK) applies to both.
+grant insert (id, stop_id, name, link, cost, travel_time, sort_order, ready_to_book) on public.activities to authenticated;
+grant delete on public.activities to authenticated;
 
 -- Accommodation votes: like activity votes, a vote is a row that is inserted
 -- (vote) or deleted (un-vote), never edited, so only INSERT and DELETE are

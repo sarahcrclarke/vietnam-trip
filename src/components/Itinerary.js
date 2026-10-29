@@ -10,7 +10,7 @@ import { daysBetween, formatDuration } from "@/lib/duration";
 import { migrateVotes } from "@/lib/voting";
 import { migrateAccommodation } from "@/lib/accommodation";
 import { accommodationNights } from "@/lib/accommodation";
-import { isUuid, activityCostColumn } from "@/lib/tripData";
+import { isUuid, activityCostColumn, newActivityId, nextActivitySortOrder } from "@/lib/tripData";
 
 // List-level client state for the itinerary's stops. Initialised from JSON
 // (each stop keeps its stable JSON `id`; new stops get a temporary id). No
@@ -53,7 +53,7 @@ const ACTIVITY_FIELD_COLUMNS = {
   travelTime: ["travel_time", (v) => (v && v.trim() ? v : null)],
 };
 
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, onPersistActivityReady, onPersistActivityFields, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onPersistActivityVote, onPersistActivityReady, onPersistActivityFields, onPersistActivityAdd, onPersistActivityRemove, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -283,6 +283,74 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
       );
     },
     [onPersistActivityFields]
+  );
+
+  // Adding an activity. On a saved stop in Supabase mode the card gets a real
+  // UUID and a sort_order after every existing one, appears at once, and the
+  // row is inserted in the background (anything done to it meanwhile is queued
+  // behind the INSERT). If the insert fails the card is removed again. Local
+  // mode / unsaved stops keep temporary non-UUID ids and stay in memory.
+  const failedActivityInserts = useRef(new Set());
+  const addActivity = useCallback(
+    (stopId) => {
+      const stop = stopsRef.current.find((s) => s.id === stopId);
+      if (!stop) return;
+      const persist = Boolean(onPersistActivityAdd) && isUuid(stopId);
+      seq.current += 1;
+      const activity = {
+        id: persist ? newActivityId() : `new-${Date.now()}-${seq.current}`,
+        name: "",
+        link: "",
+        cost: "",
+        image: null,
+        travelTime: "",
+        votes: {},
+        readyToBook: false,
+        ...(persist ? { sortOrder: nextActivitySortOrder(stop.activities) } : {}),
+      };
+      setStops((prev) => prev.map((s) => (s.id === stopId ? { ...s, activities: [...s.activities, activity] } : s)));
+      if (!persist) return;
+      onPersistActivityAdd(stopId, activity).catch((err) => {
+        console.error("Activity add failed", err);
+        failedActivityInserts.current.add(activity.id);
+        setStops((prev) =>
+          prev.map((s) => (s.id === stopId ? { ...s, activities: s.activities.filter((a) => a.id !== activity.id) } : s))
+        );
+        setVoteError("Couldn't save that change. Please try again.");
+      });
+    },
+    [onPersistActivityAdd]
+  );
+
+  // Deleting an activity: optimistic (so its cost leaves every total at once);
+  // saved activities are then deleted in the database (their votes cascade). If
+  // that fails the card comes back in its old position with its old state.
+  const removeActivity = useCallback(
+    (stopId, activityId) => {
+      const stop = stopsRef.current.find((s) => s.id === stopId);
+      const index = stop?.activities.findIndex((a) => a.id === activityId) ?? -1;
+      if (index < 0) return;
+      const removed = stop.activities[index];
+      setStops((prev) =>
+        prev.map((s) => (s.id === stopId ? { ...s, activities: s.activities.filter((a) => a.id !== activityId) } : s))
+      );
+      if (!onPersistActivityRemove || !isUuid(activityId)) return;
+      onPersistActivityRemove(activityId).catch((err) => {
+        console.error("Activity delete failed", err);
+        if (!failedActivityInserts.current.has(activityId)) {
+          setStops((prev) =>
+            prev.map((s) => {
+              if (s.id !== stopId || s.activities.some((a) => a.id === activityId)) return s;
+              const next = [...s.activities];
+              next.splice(Math.min(index, next.length), 0, removed);
+              return { ...s, activities: next };
+            })
+          );
+        }
+        setVoteError("Couldn't save that change. Please try again.");
+      });
+    },
+    [onPersistActivityRemove]
   );
 
   const updateActivities = useCallback(
@@ -602,6 +670,8 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onPhotoChange={(photo) => updatePhoto(stop.id, photo)}
                   onDateChange={updateDate}
                   onActivitiesChange={(activities) => updateActivities(stop.id, activities)}
+                  onActivityAdd={() => addActivity(stop.id)}
+                  onActivityRemove={(activityId) => removeActivity(stop.id, activityId)}
                   onActivityFieldChange={(activityId, key, value) => updateActivityField(stop.id, activityId, key, value)}
                   onActivityVoteToggle={(activityId, travellerId) => toggleActivityVote(stop.id, activityId, travellerId)}
                   onActivityReadyToggle={(activityId) => toggleActivityReady(stop.id, activityId)}

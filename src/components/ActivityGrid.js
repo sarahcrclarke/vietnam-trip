@@ -7,18 +7,16 @@ import { isUnanimous } from "@/lib/voting";
 // Controlled by Itinerary's stops state (not local) because the trip cost
 // summary needs every activity's live cost across every destination to
 // compute its subtotal, and unanimity needs every activity's votes compared
-// against the current voter list at once. No persistence — a refresh
-// restores the original activities.
+// against the current voter list at once.
 //
 // Layout: a native CSS-grid carousel (grid-auto-flow: column) rather than a
 // tall grid or a carousel library — two rows on desktop, one larger row on
 // mobile, continuing sideways into a horizontally-scrollable track.
 
 const ActivityGrid = forwardRef(function ActivityGrid(
-  { activities, onChange, onFieldChange, onVoteToggle, onReadyToggle, currency, loc, travellers, renderControls },
+  { activities, onChange, onFieldChange, onAdd, onRemove, onVoteToggle, onReadyToggle, currency, loc, travellers, renderControls },
   ref
 ) {
-  const seq = useRef(0);
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -29,16 +27,9 @@ const ActivityGrid = forwardRef(function ActivityGrid(
   // immediately, and unanimity is always judged against the current set.
   const voters = travellers.filter((t) => t.included && t.voter);
 
-  const addActivity = () => {
-    seq.current += 1;
-    const id = `new-${Date.now()}-${seq.current}`;
-    onChange([
-      ...activities,
-      { id, name: "", link: "", cost: "", image: null, travelTime: "", votes: {}, readyToBook: false },
-    ]);
-  };
-
-  const removeActivity = (id) => onChange(activities.filter((a) => a.id !== id));
+  // Adding / removing go through Itinerary (which also persists them).
+  const addActivity = () => onAdd();
+  const removeActivity = (id) => onRemove(id);
 
   // Votes go through Itinerary's single handler (shared with the Votes page),
   // which updates state optimistically and persists the change.
