@@ -13,6 +13,8 @@ import {
   createActivityFieldWriter,
   createActivityQueue,
   createActivityWriter,
+  createActivityImageWriter,
+  createActivityRemover,
   createAccommodationWriter,
   createSelectedAccommodationWriter,
   createStopFieldWriter,
@@ -57,6 +59,7 @@ export default function TripGate({ localItinerary }) {
     const writeActivityVote = createActivityVoteWriter(supabase);
     const activityWriter = createActivityWriter(supabase, activityQueue);
     const writeActivityFields = createActivityFieldWriter(supabase, 600, activityQueue);
+    const activityImageWriter = createActivityImageWriter(supabase, activityQueue);
     setTrip({
       itinerary: buildItineraryFromRows(rows, localItinerary, signedUrls),
       refreshImageUrls: (paths) => signStoragePaths(supabase, paths),
@@ -66,10 +69,14 @@ export default function TripGate({ localItinerary }) {
       persistActivityReady: createActivityReadyWriter(supabase, activityQueue),
       persistActivityFields: writeActivityFields,
       persistActivityAdd: activityWriter.insert,
-      persistActivityRemove: (activityId) => {
-        writeActivityFields.discard(activityId);
-        return activityWriter.remove(activityId);
-      },
+      persistActivityImage: activityImageWriter.replace,
+      // Once the row is gone, its stored image is removed best-effort; a
+      // cleanup problem never fails (or undoes) the delete.
+      persistActivityRemove: createActivityRemover({
+        activityWriter,
+        imageWriter: activityImageWriter,
+        discardFieldEdits: writeActivityFields.discard,
+      }),
       accommodationWriter,
       // A vote waits for its card's own add/edit to finish so the row exists.
       persistAccommodationVote: (accommodationId, travellerId, selected) =>
@@ -141,6 +148,7 @@ export default function TripGate({ localItinerary }) {
         onPersistActivityVote={trip.persistActivityVote}
         onPersistActivityReady={trip.persistActivityReady}
         onPersistActivityFields={trip.persistActivityFields}
+        onPersistActivityImage={trip.persistActivityImage}
         onPersistActivityAdd={trip.persistActivityAdd}
         onPersistActivityRemove={trip.persistActivityRemove}
         accommodationWriter={trip.accommodationWriter}

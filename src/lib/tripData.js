@@ -1,6 +1,6 @@
 import { TRIP_ID } from "./tripConfig";
 import { newAccommodationId } from "./accommodation";
-import { isStoragePath, resolveStoredImage } from "./imageStorage";
+import { IMAGE_BUCKET, isStoragePath, newActivityImagePath, resolveStoredImage, signStoragePaths } from "./imageStorage";
 
 // READ-ONLY access layer: membership check, join, and fetching the trip's
 // relational rows, plus an adapter that reshapes those rows into the
@@ -267,6 +267,89 @@ export function createActivityWriter(supabase, queue = createActivityQueue()) {
         if (error) throw error;
         if (!data?.length) throw new Error("Activity not deleted"); // RLS filtered it out / already gone
       }),
+  };
+}
+
+// WRITE: an activity's image. replace(activityId, blob, currentPath) runs on
+// the activity's own queue (so it waits for the INSERT and for any edit /
+// delete already in flight, and a delete queued after it waits for it) in this
+// order, and never deletes the working image before the DB pointer has moved:
+//   1. upload the processed JPEG to a NEW unique path in the private bucket
+//      (failure: nothing else touched, error thrown);
+//   2. point activities.image_url at it (failure or zero rows: the new object
+//      is deleted best-effort and the error thrown, so the old path stays);
+//   3. sign the new path for immediate display (falls back to a local preview
+//      URL if signing fails);
+//   4. only then delete the previous object, best-effort — a failure there is
+//      logged and ignored (a harmless private orphan).
+// `known` remembers each activity's latest path so back-to-back replacements
+// (and the delete cleanup) clean up the right object, not a stale one.
+export function createActivityImageWriter(supabase, queue = createActivityQueue()) {
+  const known = new Map();
+  const bucket = () => supabase.storage.from(IMAGE_BUCKET);
+  const removeQuietly = async (path) => {
+    if (!isStoragePath(path)) return;
+    try {
+      const { error } = await bucket().remove([path]);
+      if (error) throw error;
+    } catch (err) {
+      console.warn("Couldn't delete a stored image (left as an orphan)", path, err);
+    }
+  };
+  return {
+    replace: (activityId, blob, currentPath) =>
+      queue.run(activityId, async () => {
+        const oldPath = known.has(activityId) ? known.get(activityId) : currentPath;
+        const path = newActivityImagePath(TRIP_ID, activityId);
+
+        const { error: uploadError } = await bucket().upload(path, blob, {
+          contentType: "image/jpeg",
+          cacheControl: "31536000", // unique path, never rewritten: cache hard
+          upsert: false,
+        });
+        if (uploadError) throw uploadError;
+
+        try {
+          const { data, error } = await supabase
+            .from("activities")
+            .update({ image_url: path })
+            .eq("id", activityId)
+            .select("id");
+          if (error) throw error;
+          if (!data?.length) throw new Error("Activity not updated"); // RLS filtered it out / row gone
+        } catch (err) {
+          await removeQuietly(path);
+          throw err;
+        }
+
+        known.set(activityId, path);
+        const signed = await signStoragePaths(supabase, [path]);
+        const url = signed.get(path) ?? URL.createObjectURL(blob);
+        if (oldPath && oldPath !== path) await removeQuietly(oldPath);
+        return { path, url };
+      }),
+    // After an activity row was deleted: drop its stored image (best-effort,
+    // never throws). Runs on the queue so it sees the latest path.
+    cleanupAfterDelete: (activityId, statePath) =>
+      queue.run(activityId, async () => {
+        const path = known.has(activityId) ? known.get(activityId) : statePath;
+        known.delete(activityId);
+        await removeQuietly(path);
+      }),
+  };
+}
+
+// Deleting a saved activity: drop its pending edits, delete the row (votes
+// cascade), and only once that has succeeded remove its stored image,
+// best-effort. A cleanup problem never fails or undoes the delete; a failed
+// delete never touches the image.
+export function createActivityRemover({ activityWriter, imageWriter, discardFieldEdits }) {
+  return (activityId, imagePath) => {
+    discardFieldEdits(activityId);
+    return activityWriter.remove(activityId).then((result) => {
+      imageWriter.cleanupAfterDelete(activityId, imagePath);
+      return result;
+    });
   };
 }
 

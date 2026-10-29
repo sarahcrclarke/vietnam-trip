@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import ActivityCard from "./ActivityCard";
 import { isUnanimous } from "@/lib/voting";
+import { isUuid } from "@/lib/tripData";
 
 // Controlled by Itinerary's stops state (not local) because the trip cost
 // summary needs every activity's live cost across every destination to
@@ -14,7 +15,7 @@ import { isUnanimous } from "@/lib/voting";
 // mobile, continuing sideways into a horizontally-scrollable track.
 
 const ActivityGrid = forwardRef(function ActivityGrid(
-  { activities, onChange, onFieldChange, onAdd, onRemove, onVoteToggle, onReadyToggle, currency, loc, travellers, renderControls },
+  { activities, onChange, onFieldChange, onAdd, onRemove, onImageUpload, onVoteToggle, onReadyToggle, currency, loc, travellers, renderControls },
   ref
 ) {
   const scrollRef = useRef(null);
@@ -36,10 +37,10 @@ const ActivityGrid = forwardRef(function ActivityGrid(
   const toggleVote = (activityId, travellerId) => onVoteToggle(activityId, travellerId);
 
   // name / link / cost / travelTime go through Itinerary's field handler (which
-  // also persists saved activities); the image is still local-only.
+  // also persists saved activities); a saved activity's image goes through onImageUpload.
   const updateField = (activityId, key, value) => onFieldChange(activityId, key, value);
 
-  // The image (local-only for now) is patched here — controlled (not local to
+  // The image of an unsaved / local-mode activity (local-only) is patched here — controlled (not local to
   // ActivityCard) so the Votes page's activity rows, which read straight from
   // this same `activities` array via Itinerary's `stops`, reflect it immediately.
   const patchActivity = (activityId, patch) =>
@@ -105,6 +106,7 @@ const ActivityGrid = forwardRef(function ActivityGrid(
             onLinkChange={(link) => updateField(activity.id, "link", link)}
             onTravelTimeChange={(travelTime) => updateField(activity.id, "travelTime", travelTime)}
             onImageChange={(image) => patchActivity(activity.id, { image })}
+            onImageUpload={onImageUpload && isUuid(activity.id) ? (file) => onImageUpload(activity.id, file) : undefined}
             onRemove={removeActivity}
           />
         ))}

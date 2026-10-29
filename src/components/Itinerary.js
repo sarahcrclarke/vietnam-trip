@@ -11,7 +11,7 @@ import { migrateVotes } from "@/lib/voting";
 import { migrateAccommodation } from "@/lib/accommodation";
 import { accommodationNights } from "@/lib/accommodation";
 import { isUuid, activityCostColumn, newActivityId, nextActivitySortOrder } from "@/lib/tripData";
-import { isSignedStorageUrl, SIGNED_URL_REFRESH_MS } from "@/lib/imageStorage";
+import { ImageUploadError, isSignedStorageUrl, processImageFile, SIGNED_URL_REFRESH_MS } from "@/lib/imageStorage";
 
 // List-level client state for the itinerary's stops. Initialised from JSON
 // (each stop keeps its stable JSON `id`; new stops get a temporary id). No
@@ -54,7 +54,7 @@ const ACTIVITY_FIELD_COLUMNS = {
   travelTime: ["travel_time", (v) => (v && v.trim() ? v : null)],
 };
 
-export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onRefreshImageUrls, onPersistActivityVote, onPersistActivityReady, onPersistActivityFields, onPersistActivityAdd, onPersistActivityRemove, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
+export default function Itinerary({ itinerary, tripReturnDate, travellers, extraCosts, onExtraCostsChange, view = "itinerary", onViewChange, scrollToStopId, onScrollToStopHandled, onRefreshImageUrls, onPersistActivityImage, onPersistActivityVote, onPersistActivityReady, onPersistActivityFields, onPersistActivityAdd, onPersistActivityRemove, accommodationWriter, onPersistAccommodationVote, onPersistSelectedAccommodation, onPersistStopFields }) {
   const { currency } = itinerary;
   // Each stop's legacy single `transit` is migrated once, up front, into a
   // `journey` — an ordered list of transport legs and optional stopovers —
@@ -386,7 +386,7 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
         prev.map((s) => (s.id === stopId ? { ...s, activities: s.activities.filter((a) => a.id !== activityId) } : s))
       );
       if (!onPersistActivityRemove || !isUuid(activityId)) return;
-      onPersistActivityRemove(activityId).catch((err) => {
+      onPersistActivityRemove(activityId, removed.imagePath ?? null).catch((err) => {
         console.error("Activity delete failed", err);
         if (!failedActivityInserts.current.has(activityId)) {
           setStops((prev) =>
@@ -402,6 +402,35 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
       });
     },
     [onPersistActivityRemove]
+  );
+
+  // Changing a saved activity's photo (Supabase mode, real UUID only — anything
+  // else keeps the card's local preview). The current photo stays on screen
+  // throughout; the new one replaces it only once it is uploaded AND the
+  // database points at it. Any failure leaves the old photo and old DB value
+  // untouched. Returns after the attempt so the card can show it's busy.
+  const uploadActivityImage = useCallback(
+    async (stopId, activityId, file) => {
+      const current = stopsRef.current.find((s) => s.id === stopId)?.activities.find((a) => a.id === activityId);
+      if (!current) return;
+      try {
+        const blob = await processImageFile(file);
+        const { path, url } = await onPersistActivityImage(activityId, blob, current.imagePath ?? null);
+        setStops((prev) =>
+          prev.map((s) =>
+            s.id !== stopId
+              ? s
+              : { ...s, activities: s.activities.map((a) => (a.id === activityId ? { ...a, image: url, imagePath: path } : a)) }
+          )
+        );
+      } catch (err) {
+        console.error("Activity image save failed", err);
+        setVoteError(
+          err instanceof ImageUploadError ? err.message : "Couldn't save that photo. Your previous photo is unchanged."
+        );
+      }
+    },
+    [onPersistActivityImage]
   );
 
   const updateActivities = useCallback(
@@ -723,6 +752,11 @@ export default function Itinerary({ itinerary, tripReturnDate, travellers, extra
                   onActivitiesChange={(activities) => updateActivities(stop.id, activities)}
                   onActivityAdd={() => addActivity(stop.id)}
                   onActivityRemove={(activityId) => removeActivity(stop.id, activityId)}
+                  onActivityImageUpload={
+                    onPersistActivityImage
+                      ? (activityId, file) => (isUuid(activityId) ? uploadActivityImage(stop.id, activityId, file) : null)
+                      : undefined
+                  }
                   onActivityFieldChange={(activityId, key, value) => updateActivityField(stop.id, activityId, key, value)}
                   onActivityVoteToggle={(activityId, travellerId) => toggleActivityVote(stop.id, activityId, travellerId)}
                   onActivityReadyToggle={(activityId) => toggleActivityReady(stop.id, activityId)}

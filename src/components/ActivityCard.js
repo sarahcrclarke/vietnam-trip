@@ -14,10 +14,11 @@ import ReadyToBookButton from "./ReadyToBookButton";
 // replace/remove (certainly orphaned at that moment) but deliberately not on
 // unmount, since the shared `image` value may still be in use elsewhere
 // (Votes) after this component unmounts.
-export default function ActivityCard({ activity, currency, voters, unanimous, onToggleVote, onReadyToggle, onCostChange, onNameChange, onLinkChange, onTravelTimeChange, onImageChange, onRemove }) {
+export default function ActivityCard({ activity, currency, voters, unanimous, onToggleVote, onReadyToggle, onCostChange, onNameChange, onLinkChange, onTravelTimeChange, onImageChange, onImageUpload, onRemove }) {
   const { name, link, cost, image, votes, readyToBook } = activity;
   const [confirming, setConfirming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [savingPhoto, setSavingPhoto] = useState(false);
   const menuRef = useRef(null);
   const objectUrlRef = useRef(null);
   const fileRef = useRef(null);
@@ -43,6 +44,14 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
   const onFile = (e) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // let the same file be picked again later
+    // Saved activity: processed, uploaded and persisted by Itinerary; the
+    // current photo stays until the new one is safely saved. (The file is
+    // validated there, so e.g. HEIC with no MIME type still gets through.)
+    if (file && onImageUpload) {
+      setSavingPhoto(true);
+      Promise.resolve(onImageUpload(file)).finally(() => setSavingPhoto(false));
+      return;
+    }
     if (!file || !file.type.startsWith("image/")) return; // images only
     const url = URL.createObjectURL(file);
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
@@ -75,6 +84,7 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
             type="button"
             onClick={openPicker}
             aria-label="Add photo"
+            disabled={savingPhoto}
             className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-1 bg-stone/[0.06] text-stone/35 transition-colors hover:bg-stone/10 hover:text-forest/60"
           >
             <CameraIcon />
@@ -98,15 +108,18 @@ export default function ActivityCard({ activity, currency, voters, unanimous, on
             <div className="absolute right-0 top-full z-10 mt-1 min-w-[8.5rem] space-y-1 rounded-[4px] border border-border bg-background px-2 py-1.5 shadow-sm">
               <button
                 type="button"
+                disabled={savingPhoto}
                 onClick={() => {
                   openPicker();
                   setShowMenu(false);
                 }}
-                className="block w-full text-left text-xs text-muted transition-colors hover:text-forest"
+                className="block w-full text-left text-xs text-muted transition-colors hover:text-forest disabled:opacity-50"
               >
-                {image ? "Change photo" : "Add photo"}
+                {savingPhoto ? "Saving photo…" : image ? "Change photo" : "Add photo"}
               </button>
-              {image && (
+              {/* Saved activities: no Remove yet — clearing image_url would bring
+                  the bundled fallback back. Local-only cards keep it. */}
+              {image && !onImageUpload && (
                 <button
                   type="button"
                   onClick={() => {

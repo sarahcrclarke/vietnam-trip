@@ -12,7 +12,7 @@ import { destinationBreakdown } from "@/lib/cost";
 import DestinationPhoto from "./DestinationPhoto";
 import { DragHandleIcon } from "./icons";
 
-export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onNameChange, onDescriptionChange, onPhotoChange, onDateChange, onActivitiesChange, onActivityFieldChange, onActivityAdd, onActivityRemove, onActivityVoteToggle, onActivityReadyToggle, onAccommodationsChange, onAccommodationVoteToggle, onAccommodationWishlistUrlChange, onSelectedAccommodationChange, duration, nights, travellers }) {
+export default function StopPanel({ day, index, currency, onRemove, onDragStart, onMoveStop, dragging, onNameChange, onDescriptionChange, onPhotoChange, onDateChange, onActivitiesChange, onActivityFieldChange, onActivityAdd, onActivityRemove, onActivityImageUpload, onActivityVoteToggle, onActivityReadyToggle, onAccommodationsChange, onAccommodationVoteToggle, onAccommodationWishlistUrlChange, onSelectedAccommodationChange, duration, nights, travellers }) {
   const destination = destinationBreakdown(day);
   const number = String(index + 1).padStart(2, "0");
   const [confirming, setConfirming] = useState(false);
@@ -221,6 +221,7 @@ export default function StopPanel({ day, index, currency, onRemove, onDragStart,
                     onFieldChange={onActivityFieldChange}
                     onAdd={onActivityAdd}
                     onRemove={onActivityRemove}
+                    onImageUpload={onActivityImageUpload}
                     onVoteToggle={onActivityVoteToggle}
                     onReadyToggle={onActivityReadyToggle}
                     currency={currency}
